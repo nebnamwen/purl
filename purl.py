@@ -12,6 +12,7 @@ class needle(object):
 
         self.stitches = deque()
         self.loose_edge = None
+        self.orientation = 1
 
     def _row_height(self): return 1.0 / self.rpi
     def _stitch_width(self): return 1.0 / self.spi
@@ -23,18 +24,64 @@ class needle(object):
     def cast_on(self, N):
         self.stitches.append(None)
 
-        interval = [array([1,0,0]) * self._stitch_width() * i for i in range(N)]
+        interval = [array([1,0,0]) * self._stitch_width() * i for i in reversed(range(N))]
 
         for p in interval: self._create_node_at(p, [], 1)
 
         self.turn()
+        self.orientation = 1
+
+    def _arrow(self, pos):
+        return array([1,0,0]) * self.orientation
+
+    def _relax(self, N = 1):
+        working = []
+        interval = 0
+
+        working.append(self.stitches[-1].before if self.stitches[-1] else None)
+
+        i = 0
+        while interval < self._stitch_width() * 2 or len(working) < N + 2:
+            s = self.stitches[i]
+            if s is None:
+                working.append(s)
+                interval = self._stitch_width() * 2
+            elif s.before is working[-1]:
+                pass
+            else:
+                s = s.before
+                if working[-1] is not None:
+                    interval += self._arrow(s.pos).dot(working[-1].pos - s.pos)
+                working.append(s)
+
+            i += 1
+
+        for k in range(100):
+            forces = []
+            for i in range(1,len(working) - 1):
+                for j in (-1,1):
+                    if working[i+j] is not None:
+                        arrow = self._arrow(working[i].pos)
+                        target = working[i+j].pos + j*self._stitch_width()*arrow
+                        delta = arrow * arrow.dot(target - working[i].pos)
+                        delta *= 0.5
+                        forces.append(force(working[i], delta))
+            for f in forces: f.apply()
 
     def _create_node(self, pull, push):
         inbound = [self.stitches.pop() for i in range(pull)]
-        if not inbound: raise ValueError # need to fix this to do yarnovers
-        if None in inbound: raise ValueError
+        if not inbound:
+            if self.loose_edge:
+                newpos = self.loose_edge.before.pos
+            elif self.stitches and self.stitches[-1]:
+                newpos = self._displace(self.stitches[-1].before.pos)
+            else:
+                raise ValueError
+        elif None in inbound:
+            raise ValueError
+        else:
+            newpos = self._displace(sum([s.before.pos for s in inbound]) / len(inbound))
 
-        newpos = self._displace(sum([s.before.pos for s in inbound]) / len(inbound))
         self._create_node_at(newpos, inbound, push)
 
     def _create_node_at(self, pos, inbound, push):
@@ -45,25 +92,48 @@ class needle(object):
 
         self.loose_edge = h_edge(new_node, self._stitch_width(), self.color)
 
+    def _rotate(self, N, M):
+        working = deque()
+
+        for i in range(N):
+            s = self.stitches.pop()
+            if s is None: raise ValueError
+            working.appendleft(s)
+
+        working.rotate(M)
+
+        while working:
+            self.stitches.append(working.popleft())
+
     def turn(self):
         if self.loose_edge:
             self.loose_edge.remove()
             self.loose_edge = None
         self.stitches.reverse()
+        self.orientation *= -1
 
     def knit(self, N = 1):
         for i in range(N):
             self._create_node(1,1)
+            self._relax()
 
     def kfab(self):
         self._create_node(1,2)
+        self._relax()
 
     def k2tog(self):
         self._create_node(2,1)
+        self._relax()
+
+    def yo(self):
+        self._create_node(0,1)
+        self.stitches[0].length = self._yarn_thickness()
+        self._relax()
 
     def cbl4(self):
         self._rotate(4,2)
         for i in range(4): self._create_node(1,1)
+        self._relax(4)
 
     def cast_off(self):
         if self.loose_edge:
