@@ -1,10 +1,11 @@
 import numpy
 from numpy import array
+from numpy.linalg import norm
 import Tkinter
 from collections import deque
 
 class needle(object):
-    def __init__(self, rpi=5, spi=5, wpi=12, color="gray"):
+    def __init__(self, rpi=5, spi=5, wpi=15, color="gray"):
         self.rpi = rpi
         self.spi = spi
         self.wpi = wpi
@@ -24,9 +25,9 @@ class needle(object):
     def cast_on(self, N):
         self.stitches.append(None)
 
-        interval = [array([1,0,0]) * self._stitch_width() * i for i in reversed(range(N))]
+        positions = [array([1,0,0]) * self._stitch_width() * i for i in reversed(range(N))]
 
-        for p in interval: self._create_node_at(p, [], 1)
+        for p in positions: self._create_node_at(p, [], 1)
 
         self.turn()
         self.orientation = 1
@@ -56,7 +57,7 @@ class needle(object):
 
             i += 1
 
-        for k in range(100):
+        for k in range(len(working)*15):
             forces = []
             for i in range(1,len(working) - 1):
                 for j in (-1,1):
@@ -145,11 +146,17 @@ class needle(object):
             if next: next.remove()
 
 class _mesh(object):
-    def __init__(self): self.objects = []
+    def __init__(self):
+        self.clear()
 
-    def add(self, obj): self.objects.append(obj)
+    def clear(self):
+        self.objects = []
 
-    def remove(self, obj): self.objects.remove(obj)
+    def add(self, obj):
+        self.objects.append(obj)
+
+    def remove(self, obj):
+        self.objects.remove(obj)
 
     def perturb(self, delta):
         for obj in self.objects:
@@ -160,8 +167,10 @@ class _mesh(object):
     def relax(self, N=1):
         for i in range(N):
             forces = []
-            for obj in self.objects: forces.extend(obj.get_forces())
-            for f in forces: f.apply()
+            for obj in self.objects:
+                forces.extend(obj.get_forces())
+            for f in forces:
+                f.apply()
 
 mesh = _mesh()
 
@@ -174,7 +183,54 @@ class node(object):
         mesh.add(self)
 
     def get_forces(self):
-        return []
+        forces = []
+
+        before = self.__before()
+        after = self.__after()
+        up = self.__up()
+        down = self.__down()
+
+        if before or after:
+            bef = before.before.pos if before else self.pos
+            aft = after.after.pos if after else self.pos
+            h_arrow = aft - bef
+            hs = norm(h_arrow)
+            if hs > 0:
+                h_arrow /= hs
+
+                for e in down:
+                    delta = h_arrow * h_arrow.dot(e.before.pos - self.pos)
+                    delta *= 0.1 / len(down)
+                    forces.append(force(self, delta))
+                    forces.append(force(e.before, -delta))
+
+                for e in up:
+                    delta = h_arrow * h_arrow.dot(e.after.pos - self.pos)
+                    delta *= 0.1 / len(up)
+                    forces.append(force(self, delta))
+                    forces.append(force(e.after, -delta))
+
+        if up or down:
+            upos = sum([e.after.pos for e in up]) / len(up) if up else self.pos
+            dpos = sum([e.before.pos for e in down]) / len(down) if down else self.pos
+            v_arrow = upos - dpos
+            vs = norm(v_arrow)
+            if vs > 0:
+                v_arrow /= vs
+
+                if before:
+                    delta = v_arrow * v_arrow.dot(before.before.pos - self.pos)
+                    delta *= 0.1
+                    forces.append(force(self, delta))
+                    forces.append(force(before.before, -delta))
+
+                if after:
+                    delta = v_arrow * v_arrow.dot(after.after.pos - self.pos)
+                    delta *= 0.1
+                    forces.append(force(self, delta))
+                    forces.append(force(after.after, -delta))
+
+        return forces
 
     def draw(self, disp):
         pass
@@ -211,7 +267,7 @@ class edge(object):
 
     def get_forces(self):
         s = self.before.pos - self.after.pos
-        ns = numpy.linalg.norm(s)
+        ns = norm(s)
         n = s / ns if ns > 0 else array([0,0,0])
         delta = self.length - ns
         return [ force( self.before, n * delta * 0.25 ),
@@ -265,3 +321,64 @@ class display(object):
     def draw_pos(self, pos):
         xyz = self.transform.dot(pos)
         return (xyz[0:2]*100 + self.center)
+
+class test:
+    @staticmethod
+    def rect(n, m):
+        mesh.clear()
+        N = needle()
+        N.cast_on(n)
+        for i in range(m):
+            N.knit(n)
+            N.turn()
+        N.cast_off()
+        mesh.relax(10*(n+m))
+        display().run()
+
+    @staticmethod
+    def k2togyo(n,m):
+        mesh.clear()
+        N = needle()
+        N.cast_on(n*2+2)
+
+        for i in range(m):
+            N.knit(n*2+2)
+            N.turn()
+
+        N.knit(n)
+        N.k2tog()
+        N.yo()
+        N.knit(n)
+        N.turn()
+
+        for i in range(m):
+            N.knit(n*2+2)
+            N.turn()
+
+        N.cast_off()
+        mesh.relax(40*(n+m))
+        display().run()
+
+    @staticmethod
+    def cbl4(n,m,k):
+        mesh.clear()
+        N = needle()
+        N.cast_on(n*2+4)
+
+        for j in range(k):
+            for i in range(m):
+                N.knit(n*2+4)
+                N.turn()
+
+            N.knit(n)
+            N.cbl4()
+            N.knit(n)
+            N.turn()
+
+        for i in range(m):
+            N.knit(n*2+4)
+            N.turn()
+
+        N.cast_off()
+        mesh.relax(40*(n+m))
+        display().run()
