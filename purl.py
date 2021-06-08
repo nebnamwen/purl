@@ -1,5 +1,5 @@
 import numpy
-from numpy import array
+from numpy import array, cross
 from numpy.linalg import norm
 import Tkinter
 from collections import deque
@@ -24,13 +24,13 @@ class needle(object):
 
     def cast_on(self, N):
         self.stitches.append(None)
+        self.turn()
 
         positions = [array([1,0,0]) * self._stitch_width() * i for i in reversed(range(N))]
 
-        for p in positions: self._create_node_at(p, [], 1)
+        for p in positions: self._create_node_at(p, 0, [], 1)
 
         self.turn()
-        self.orientation = 1
 
     def _arrow(self, pos):
         return array([1,0,0]) * self.orientation
@@ -69,7 +69,7 @@ class needle(object):
                         forces.append(force(working[i], delta))
             for f in forces: f.apply()
 
-    def _create_node(self, pull, push):
+    def _create_node(self, ks_norm, pull, push, cls=None):
         inbound = [self.stitches.pop() for i in range(pull)]
         if not inbound:
             if self.loose_edge:
@@ -83,10 +83,10 @@ class needle(object):
         else:
             newpos = self._displace(sum([s.before.pos for s in inbound]) / len(inbound))
 
-        self._create_node_at(newpos, inbound, push)
+        self._create_node_at(newpos, ks_norm, inbound, push, cls)
 
-    def _create_node_at(self, pos, inbound, push):
-        new_node = node(pos, self.loose_edge, inbound)
+    def _create_node_at(self, pos, ks_norm, inbound, push, cls=None):
+        new_node = (cls or node)(pos, self.orientation, ks_norm, self.loose_edge, inbound)
 
         for i in range(push):
             self.stitches.appendleft(v_edge(new_node, self._stitch_width(), self.color))
@@ -115,25 +115,34 @@ class needle(object):
 
     def knit(self, N = 1):
         for i in range(N):
-            self._create_node(1,1)
+            self._create_node(1,1,1)
+            self._relax()
+
+    def purl(self, N = 1):
+        for i in range(N):
+            self._create_node(-1,1,1)
             self._relax()
 
     def kfab(self):
-        self._create_node(1,2)
+        self._create_node(1,1,2)
         self._relax()
 
     def k2tog(self):
-        self._create_node(2,1)
+        self._create_node(1,2,1)
+        self._relax()
+
+    def p2tog(self):
+        self._create_node(-1,2,1)
         self._relax()
 
     def yo(self):
-        self._create_node(0,1)
+        self._create_node(0,0,1)
         self.stitches[0].length = self._yarn_thickness()
         self._relax()
 
     def cbl4(self):
         self._rotate(4,2)
-        for i in range(4): self._create_node(1,1)
+        for i in range(4): self._create_node(1,1,1)
         self._relax(4)
 
     def cast_off(self):
@@ -175,8 +184,10 @@ class _mesh(object):
 mesh = _mesh()
 
 class node(object):
-    def __init__(self, pos, before, below):
+    def __init__(self, pos, rs_norm, ks_norm, before, below):
         self.pos = pos
+        self.rs_norm = rs_norm
+        self.ks_norm = ks_norm
         self.edges = [before] if before else []
         self.edges.extend(below)
         for e in self.edges: e.after = self
@@ -185,55 +196,88 @@ class node(object):
     def get_forces(self):
         forces = []
 
-        before = self.__before()
-        after = self.__after()
-        up = self.__up()
-        down = self.__down()
+        h_arrow = self.__h_arrow()
+        if h_arrow is not None:
+            down = self.__down()
+            for e in down:
+                delta = h_arrow * h_arrow.dot(e.before.pos - self.pos)
+                delta *= 0.1 / len(down)
+                forces.append(force(self, delta))
+                forces.append(force(e.before, -delta))
 
-        if before or after:
-            bef = before.before.pos if before else self.pos
-            aft = after.after.pos if after else self.pos
-            h_arrow = aft - bef
-            hs = norm(h_arrow)
-            if hs > 0:
-                h_arrow /= hs
+            up = self.__up()
+            for e in up:
+                delta = h_arrow * h_arrow.dot(e.after.pos - self.pos)
+                delta *= 0.1 / len(up)
+                forces.append(force(self, delta))
+                forces.append(force(e.after, -delta))
 
-                for e in down:
-                    delta = h_arrow * h_arrow.dot(e.before.pos - self.pos)
-                    delta *= 0.1 / len(down)
-                    forces.append(force(self, delta))
-                    forces.append(force(e.before, -delta))
+        v_arrow = self.__v_arrow()
+        if v_arrow is not None:
+            before = self.__before()
+            if before:
+                delta = v_arrow * v_arrow.dot(before.before.pos - self.pos)
+                delta *= 0.1
+                forces.append(force(self, delta))
+                forces.append(force(before.before, -delta))
 
-                for e in up:
-                    delta = h_arrow * h_arrow.dot(e.after.pos - self.pos)
-                    delta *= 0.1 / len(up)
-                    forces.append(force(self, delta))
-                    forces.append(force(e.after, -delta))
-
-        if up or down:
-            upos = sum([e.after.pos for e in up]) / len(up) if up else self.pos
-            dpos = sum([e.before.pos for e in down]) / len(down) if down else self.pos
-            v_arrow = upos - dpos
-            vs = norm(v_arrow)
-            if vs > 0:
-                v_arrow /= vs
-
-                if before:
-                    delta = v_arrow * v_arrow.dot(before.before.pos - self.pos)
-                    delta *= 0.1
-                    forces.append(force(self, delta))
-                    forces.append(force(before.before, -delta))
-
-                if after:
-                    delta = v_arrow * v_arrow.dot(after.after.pos - self.pos)
-                    delta *= 0.1
-                    forces.append(force(self, delta))
-                    forces.append(force(after.after, -delta))
+            after = self.__after()
+            if after:
+                delta = v_arrow * v_arrow.dot(after.after.pos - self.pos)
+                delta *= 0.1
+                forces.append(force(self, delta))
+                forces.append(force(after.after, -delta))
 
         return forces
 
+    def __get_normal(self, orientation):
+        h_arrow = self.__h_arrow()
+        v_arrow = self.__v_arrow()
+        if None in (h_arrow, v_arrow): return None
+
+        crs = cross(self.__h_arrow(), self.__v_arrow()) * orientation
+        n = norm(crs)
+        if n > 0:
+            crs /= n
+            return crs
+        else:
+            return None
+
+    def rs_normal(self): return self.__get_normal(self.rs_norm)
+
+    def ks_normal(self): return self.__get_normal(self.ks_norm)
+
     def draw(self, disp):
         pass
+
+    def __h_arrow(self):
+        before = self.__before()
+        after = self.__after()
+        bef = before.before.pos if before else self.pos
+        aft = after.after.pos if after else self.pos
+        arrow = aft - bef
+        n = norm(arrow)
+        
+        if n > 0:
+            arrow /= n
+            return arrow
+        else:
+            return None
+
+    def __v_arrow(self):
+        up = self.__up()
+        down = self.__down()
+
+        upos = sum([e.after.pos for e in up]) / len(up) if up else self.pos
+        dpos = sum([e.before.pos for e in down]) / len(down) if down else self.pos
+        arrow = upos - dpos
+        n = norm(arrow)
+
+        if n > 0:
+            arrow /= n
+            return arrow
+        else:
+            return None
 
     def __before(self):
         all_before = [e for e in self.edges if isinstance(e, h_edge) and e.after is self]
@@ -330,6 +374,20 @@ class test:
         N.cast_on(n)
         for i in range(m):
             N.knit(n)
+            N.turn()
+        N.cast_off()
+        mesh.relax(10*(n+m))
+        display().run()
+
+    @staticmethod
+    def srect(n, m):
+        mesh.clear()
+        N = needle()
+        N.cast_on(n)
+        for i in range(m):
+            N.knit(n)
+            N.turn()
+            N.purl(n)
             N.turn()
         N.cast_off()
         mesh.relax(10*(n+m))
