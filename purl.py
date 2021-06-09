@@ -1,4 +1,4 @@
-import numpy
+import math
 from numpy import array, cross
 from numpy.linalg import norm
 import Tkinter
@@ -89,9 +89,9 @@ class needle(object):
         new_node = (cls or node)(pos, self.orientation, ks_norm, self.loose_edge, inbound)
 
         for i in range(push):
-            self.stitches.appendleft(v_edge(new_node, self._stitch_width(), self.color))
+            self.stitches.appendleft(v_edge(new_node, self._stitch_width(), self.color, self._yarn_thickness()))
 
-        self.loose_edge = h_edge(new_node, self._stitch_width(), self.color)
+        self.loose_edge = h_edge(new_node, self._stitch_width(), self.color, self._yarn_thickness())
 
     def _rotate(self, N, M):
         working = deque()
@@ -167,12 +167,6 @@ class _mesh(object):
     def remove(self, obj):
         self.objects.remove(obj)
 
-    def perturb(self, delta):
-        for obj in self.objects:
-            if isinstance(obj, node):
-                obj.pos = obj.pos + delta * 2 * (numpy.random.sample((3,)) - 0.5)
-                obj.pos[2] = 0
-
     def relax(self, N=1):
         for i in range(N):
             forces = []
@@ -233,22 +227,29 @@ class node(object):
     def __get_normal(self, orientation):
         h_arrow = self.__h_arrow()
         v_arrow = self.__v_arrow()
-        if None in (h_arrow, v_arrow): return None
+        if None in (h_arrow, v_arrow): return array([0,0,0])
 
         crs = cross(self.__h_arrow(), self.__v_arrow()) * orientation
         n = norm(crs)
         if n > 0:
             crs /= n
-            return crs
-        else:
-            return None
+        return crs
 
     def rs_normal(self): return self.__get_normal(self.rs_norm)
 
     def ks_normal(self): return self.__get_normal(self.ks_norm)
 
-    def draw(self, disp):
-        pass
+    def draw(self, disp, full):
+        if full:
+            edges_to_draw = self.__up() + self.__down()
+            if self.__before() is not None: edges_to_draw.append(self.__before())
+            if self.__after() is not None: edges_to_draw.append(self.__after())
+
+            ks = disp.m.dot(self.ks_normal())[2]
+            if ks < 0: edges_to_draw.reverse()
+
+            for e in edges_to_draw:
+                e.draw_half(disp, self)
 
     def __h_arrow(self):
         before = self.__before()
@@ -296,12 +297,15 @@ class node(object):
         return [e for e in self.edges if isinstance(e, v_edge) and e.before is self]
 
 class edge(object):
-    def __init__(self, before, length, color):
+    thick_mult = 0
+
+    def __init__(self, before, length, color, thickness):
         self.before = before
         self.before.edges.append(self)
         self.after = None
         self.length = length
         self.color = color
+        self.thickness = thickness
         mesh.add(self)
 
     def remove(self):
@@ -318,25 +322,33 @@ class edge(object):
                  force( self.after, n * delta * -0.25 )
                  ]
 
-    def draw(self, disp):
-        if self.before and self.after:
+    def draw(self, disp, full):
+        if self.before and self.after and not full:
             p1 = disp.draw_pos(self.before.pos)
             p2 = disp.draw_pos(self.after.pos)
             disp.canvas.create_line([ tuple(p1), tuple(p2) ],
-                                    fill = self.color, width = 2
+                                    fill = self.color,
+                                    width = (disp.zoom * self.thickness * self.thick_mult)
                                     )
-        else:
-            if self.before:
-                p1 = disp.draw_pos(self.before.pos)
-                disp.canvas.create_oval([ tuple(p1 - array([2,2])), tuple(p1 + array([2,2])) ],
-                                        fill = "red"
-                                        )
+
+    def draw_half(self, disp, n):
+        if self.before and self.after and n in (self.before, self.after):
+            p1 = disp.draw_pos(n.pos)
+            p2 = disp.draw_pos((self.before.pos + self.after.pos) / 2)
+            disp.canvas.create_line([ tuple(p1), tuple(p2) ],
+                                    fill = "black",
+                                    width = (disp.zoom * self.thickness * self.thick_mult + 1)
+                                    )
+            disp.canvas.create_line([ tuple(p1), tuple(p2) ],
+                                    fill = self.color,
+                                    width = (disp.zoom * self.thickness * self.thick_mult - 1)
+                                    )
 
 class v_edge(edge):
-    pass
+    thick_mult = 2
 
 class h_edge(edge):
-    pass
+    thick_mult = 1
 
 class force(object):
     def __init__(self, N, D):
@@ -355,67 +367,72 @@ class display(object):
         c = Tkinter.Canvas(width=600, height=600)
         c.pack()
 
-        c.bind("<Button-1>", self.click1)
+        c.bind("<Button-1>", self.click)
         c.bind("<B1-Motion>", self.drag1)
-        c.bind("<ButtonRelease-1>", self.release1)
-        c.bind("<Button-2>", self.click2)
+        c.bind("<ButtonRelease-1>", self.release)
+        c.bind("<Button-2>", self.click)
         c.bind("<B2-Motion>", self.drag2)
-        c.bind("<ButtonRelease-2>", self.release2)
-        c.bind("<Key-plus>", self.do_zoom)
-        c.bind("<Key-minus>", self.do_zoom)
-
-        c.focus_set()
+        c.bind("<ButtonRelease-2>", self.release)
+        c.bind("<Button-3>", self.click)
+        c.bind("<B3-Motion>", self.drag3)
+        c.bind("<ButtonRelease-3>", self.release)
 
         self.canvas = c
 
-        self.draw_all()
+        self.draw_all(True)
 
     def run(self):
         self.canvas.mainloop()
 
-    def draw_all(self):
+    def draw_all(self, full):
         self.canvas.delete("all")
-        for obj in mesh.objects:
-            obj.draw(self)
+        if full:
+            objs = [ n for n in mesh.objects if isinstance(n,node) ]
+            objs.sort(key=lambda n: self.m.dot(n.pos)[2])
+        else:
+            objs = mesh.objects
+        for obj in objs:
+            obj.draw(self, full)
 
     def draw_pos(self, pos):
         xyz = self.m.dot(pos)
         return (xyz[0:2]*self.zoom + self.center)
 
-    def click1(self, e):
+    def click(self, e):
         self.drag_xy = array([e.x, e.y])
+
+    def release(self, e):
+        self.drag_xy = None
+        self.draw_all(True)
+
+    def _drag_delta(self, e):
+        if self.drag_xy is not None:
+            new_xy = array([e.x, e.y])
+            delta = new_xy - self.drag_xy
+            self.drag_xy = new_xy
+            return delta
+        else:
+            return None
 
     def drag1(self, e):
-        if self.drag_xy is not None:
-            new_xy = array([e.x, e.y])
-            delta = new_xy - self.drag_xy
+        delta = self._drag_delta(e)
+        if delta is not None:
             self.center += delta
-            self.drag_xy = new_xy
-
-            self.draw_all()
-
-    def release1(self, e):
-        self.drag_xy = None
-
-    def click2(self, e):
-        self.drag_xy = array([e.x, e.y])
+            self.draw_all(False)
 
     def drag2(self, e):
-        if self.drag_xy is not None:
-            new_xy = array([e.x, e.y])
-            delta = new_xy - self.drag_xy
+        delta = self._drag_delta(e)
+        if delta is not None:
             self.update_m(delta)
-            self.drag_xy = new_xy
+            self.draw_all(False)
 
-            self.draw_all()
-
-    def release2(self, e):
-        self.drag_xy = None
-
-    def do_zoom(self, e):
-        if e.keysym == "plus" and self.zoom < 500: self.zoom *= 1.25
-        if e.keysym == "minus" and self.zoom > 20: self.zoom *= 0.8
-        self.draw_all()
+    def drag3(self, e):
+        delta = self._drag_delta(e)
+        if delta is not None:
+            newzoom = self.zoom * math.exp(delta[1]*(-0.003))
+            if newzoom > 20 and newzoom < 500:
+                self.zoom = newzoom
+            self.draw_all(False)
 
     def update_m(self, xy):
         xy = xy / (100.0)
