@@ -348,10 +348,26 @@ class force(object):
 
 class display(object):
     def __init__(self):
-        self.transform = array([[1,0,0],[0,1,0],[0,0,1]])
+        self.m = array([[1,0,0],[0,1,0],[0,0,1]])
         self.center = array([100,100])
-        self.canvas = Tkinter.Canvas(width=600, height=600)
-        self.canvas.pack()
+        self.zoom = 100.0
+        self.drag_xy = None
+        c = Tkinter.Canvas(width=600, height=600)
+        c.pack()
+
+        c.bind("<Button-1>", self.click1)
+        c.bind("<B1-Motion>", self.drag1)
+        c.bind("<ButtonRelease-1>", self.release1)
+        c.bind("<Button-2>", self.click2)
+        c.bind("<B2-Motion>", self.drag2)
+        c.bind("<ButtonRelease-2>", self.release2)
+        c.bind("<Key-plus>", self.do_zoom)
+        c.bind("<Key-minus>", self.do_zoom)
+
+        c.focus_set()
+
+        self.canvas = c
+
         self.draw_all()
 
     def run(self):
@@ -363,8 +379,60 @@ class display(object):
             obj.draw(self)
 
     def draw_pos(self, pos):
-        xyz = self.transform.dot(pos)
-        return (xyz[0:2]*100 + self.center)
+        xyz = self.m.dot(pos)
+        return (xyz[0:2]*self.zoom + self.center)
+
+    def click1(self, e):
+        self.drag_xy = array([e.x, e.y])
+
+    def drag1(self, e):
+        if self.drag_xy is not None:
+            new_xy = array([e.x, e.y])
+            delta = new_xy - self.drag_xy
+            self.center += delta
+            self.drag_xy = new_xy
+
+            self.draw_all()
+
+    def release1(self, e):
+        self.drag_xy = None
+
+    def click2(self, e):
+        self.drag_xy = array([e.x, e.y])
+
+    def drag2(self, e):
+        if self.drag_xy is not None:
+            new_xy = array([e.x, e.y])
+            delta = new_xy - self.drag_xy
+            self.update_m(delta)
+            self.drag_xy = new_xy
+
+            self.draw_all()
+
+    def release2(self, e):
+        self.drag_xy = None
+
+    def do_zoom(self, e):
+        if e.keysym == "plus" and self.zoom < 500: self.zoom *= 1.25
+        if e.keysym == "minus" and self.zoom > 20: self.zoom *= 0.8
+        self.draw_all()
+
+    def update_m(self, xy):
+        xy = xy / (100.0)
+
+        dx, dy = xy
+
+        T = array([[1,0,dx],[0,1,dy],[-dx,-dy,1]])
+
+        self.m = T.dot(self.m)
+
+        self.m[0] /= norm(self.m[0])
+
+        self.m[2] = cross(self.m[0], self.m[1])
+        self.m[2] /= norm(self.m[2])
+
+        self.m[1] = cross(self.m[2], self.m[0])
+        self.m[1] /= norm(self.m[1])
 
 class test:
     @staticmethod
