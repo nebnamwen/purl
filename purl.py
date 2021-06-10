@@ -93,18 +93,30 @@ class needle(object):
 
         self.loose_edge = h_edge(new_node, self._stitch_width(), self.color, self._yarn_thickness())
 
-    def _rotate(self, N, M):
+    def _rotate(self, N, M, RL=0):
         working = deque()
+
+        over = []
+        under = []
 
         for i in range(N):
             s = self.stitches.pop()
             if s is None: raise ValueError
+
+            if N - i <= M:
+                over.append(s)
+            else:
+                under.append(s)
+
             working.appendleft(s)
 
         working.rotate(M)
 
         while working:
             self.stitches.append(working.popleft())
+
+        if RL != 0:
+            over_under_force(over, under, RL * self.orientation, self._yarn_thickness())
 
     def turn(self):
         if self.loose_edge:
@@ -140,10 +152,11 @@ class needle(object):
         self.stitches[0].length = self._yarn_thickness()
         self._relax()
 
-    def cbl4(self):
-        self._rotate(4,2)
-        for i in range(4): self._create_node(1,1,1)
-        self._relax(4)
+    def cable(self, NR, NL, KR, KL, RL):
+        self._rotate(NR + NL, NL, RL)
+        for i in range(NR): self._create_node(1,1,KR)
+        for i in range(NL): self._create_node(1,1,KL)
+        self._relax(NR + NL)
 
     def cast_off(self):
         if self.loose_edge:
@@ -190,16 +203,19 @@ class node(object):
     def get_forces(self):
         forces = []
 
+        down = self.__down()
+        up = self.__up()
+        before = self.__before()
+        after = self.__after()
+
         h_arrow = self.__h_arrow()
         if h_arrow is not None:
-            down = self.__down()
             for e in down:
                 delta = h_arrow * h_arrow.dot(e.before.pos - self.pos)
                 delta *= 0.1 / len(down)
                 forces.append(force(self, delta))
                 forces.append(force(e.before, -delta))
 
-            up = self.__up()
             for e in up:
                 delta = h_arrow * h_arrow.dot(e.after.pos - self.pos)
                 delta *= 0.1 / len(up)
@@ -208,19 +224,32 @@ class node(object):
 
         v_arrow = self.__v_arrow()
         if v_arrow is not None:
-            before = self.__before()
             if before:
                 delta = v_arrow * v_arrow.dot(before.before.pos - self.pos)
                 delta *= 0.1
                 forces.append(force(self, delta))
                 forces.append(force(before.before, -delta))
 
-            after = self.__after()
             if after:
                 delta = v_arrow * v_arrow.dot(after.after.pos - self.pos)
                 delta *= 0.1
                 forces.append(force(self, delta))
                 forces.append(force(after.after, -delta))
+
+        normal = self.rs_normal()
+        if norm(normal) > 0:
+            for e in up + down:
+                n = [ n for n in [e.before, e.after] if n is not self ][0]
+                delta = normal * (normal.dot(n.pos - self.pos) + e.thickness*self.rs_norm*self.ks_norm) * 0.1
+                forces.append(force(self, delta))
+                forces.append(force(n, -delta))
+
+            befaft = [ e for e in [before, after] if e is not None ]
+            for e in befaft:
+                n = [ n for n in [e.before, e.after] if n is not self ][0]
+                delta = normal * (normal.dot(n.pos - self.pos) - e.thickness*self.rs_norm*self.ks_norm) * 0.1
+                forces.append(force(self, delta))
+                forces.append(force(n, -delta))
 
         return forces
 
@@ -349,6 +378,44 @@ class v_edge(edge):
 
 class h_edge(edge):
     thick_mult = 1
+
+class over_under_force(object):
+    def __init__(self, over, under, normal, thickness):
+        self.over = over
+        self.under = under
+        self.normal = normal
+        self.thickness = thickness
+        mesh.add(self)
+
+    def draw(self, disp, full):
+        pass
+
+    def get_forces(self):
+        over_nodes = [ e.before for e in self.over ] + [ e.after for e in self.over ]
+        under_nodes = [ e.before for e in self.under ] + [ e.after for e in self.under ]
+        all_nodes = over_nodes + under_nodes
+        rs_normal = sum([n.rs_normal() for n in all_nodes])
+        normal = rs_normal * self.normal
+
+        forces = []
+
+        if norm(normal) > 0:
+            normal /= norm(normal)
+            avg_dot = sum([n.pos.dot(normal) for n in all_nodes]) / len(all_nodes)
+
+            for n in over_nodes:
+                dot = n.pos.dot(normal)
+                if dot < avg_dot + self.thickness:
+                    delta = normal * (avg_dot + self.thickness - dot) * 0.1
+                    forces.append(force(n, delta))
+
+            for n in under_nodes:
+                dot = n.pos.dot(normal)
+                if dot > avg_dot - self.thickness:
+                    delta = normal * (avg_dot - self.thickness - dot) * 0.1
+                    forces.append(force(n, delta))
+
+        return forces
 
 class force(object):
     def __init__(self, N, D):
@@ -503,7 +570,7 @@ class test:
         display().run()
 
     @staticmethod
-    def cbl4(n,m,k):
+    def cable(n,m,k):
         mesh.clear()
         N = needle()
         N.cast_on(n*2+4)
@@ -514,7 +581,7 @@ class test:
                 N.turn()
 
             N.knit(n)
-            N.cbl4()
+            N.cable(2,2,1,1,1)
             N.knit(n)
             N.turn()
 
