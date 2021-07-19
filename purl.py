@@ -222,6 +222,17 @@ class node(object):
                 forces.append(force(self, delta))
                 forces.append(force(e.after, -delta))
 
+            if before and after:
+                if h_arrow.dot(self.pos - before.before.pos) < 0:
+                    delta = 0.1 * h_arrow * h_arrow.dot(before.before.pos - self.pos)
+                    forces.append(force(self, delta))
+                    forces.append(force(before.before, -delta))
+
+                if h_arrow.dot(after.after.pos - self.pos) < 0:
+                    delta = 0.1 * h_arrow * h_arrow.dot(self.pos - after.after.pos)
+                    forces.append(force(self, delta))
+                    forces.append(force(after.after, -delta))
+
         v_arrow = self.__v_arrow()
         if v_arrow is not None:
             if before:
