@@ -249,18 +249,19 @@ class node(object):
 
         normal = self.rs_normal()
         if norm(normal) > 0:
-            for e in up + down:
-                n = [ n for n in [e.before, e.after] if n is not self ][0]
-                delta = normal * (normal.dot(n.pos - self.pos) + e.thickness*self.rs_norm*self.ks_norm) * 0.1
-                forces.append(force(self, delta))
-                forces.append(force(n, -delta))
+            if up and down:
+                for e in up + down:
+                    n = [ n for n in [e.before, e.after] if n is not self ][0]
+                    delta = normal * (normal.dot(n.pos - self.pos) + e.thickness*self.rs_norm*self.ks_norm) * 0.1
+                    forces.append(force(self, delta))
+                    forces.append(force(n, -delta))
 
-            befaft = [ e for e in [before, after] if e is not None ]
-            for e in befaft:
-                n = [ n for n in [e.before, e.after] if n is not self ][0]
-                delta = normal * (normal.dot(n.pos - self.pos) - e.thickness*self.rs_norm*self.ks_norm) * 0.1
-                forces.append(force(self, delta))
-                forces.append(force(n, -delta))
+            if before and after:
+                for e in [before, after]:
+                    n = [ n for n in [e.before, e.after] if n is not self ][0]
+                    delta = normal * (normal.dot(n.pos - self.pos) - e.thickness*self.rs_norm*self.ks_norm) * 0.1
+                    forces.append(force(self, delta))
+                    forces.append(force(n, -delta))
 
         return forces
 
@@ -382,6 +383,12 @@ class edge(object):
             disp.canvas.create_line([ tuple(p1), tuple(p2) ],
                                     fill = self.color,
                                     width = (disp.zoom * self.thickness * self.thick_mult - 1)
+                                    )
+            p1 = disp.draw_pos(0.6*self.before.pos + 0.4*self.after.pos)
+            p2 = disp.draw_pos(0.4*self.before.pos + 0.6*self.after.pos)
+            disp.canvas.create_line([ tuple(p1), tuple(p2) ],
+                                    fill = self.color,
+                                    width = (disp.zoom * self.thickness * self.thick_mult - 2)
                                     )
 
 class v_edge(edge):
