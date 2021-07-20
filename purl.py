@@ -210,58 +210,38 @@ class node(object):
 
         h_arrow = self.__h_arrow()
         if h_arrow is not None:
+            # correct horizontal shear of vertical edges
             for e in down:
-                delta = h_arrow * h_arrow.dot(e.before.pos - self.pos)
-                delta *= 0.1 / len(down)
-                forces.append(force(self, delta))
-                forces.append(force(e.before, -delta))
-
+                forces.extend(force.dot(e, h_arrow, 0, 0.1/len(down)))
             for e in up:
-                delta = h_arrow * h_arrow.dot(e.after.pos - self.pos)
-                delta *= 0.1 / len(up)
-                forces.append(force(self, delta))
-                forces.append(force(e.after, -delta))
+                forces.extend(force.dot(e, h_arrow, 0, 0.1/len(up)))
 
+            # correct foldover of horizontal edges
             if before and after:
                 if h_arrow.dot(self.pos - before.before.pos) < 0:
-                    delta = 0.1 * h_arrow * h_arrow.dot(before.before.pos - self.pos)
-                    forces.append(force(self, delta))
-                    forces.append(force(before.before, -delta))
-
+                    forces.extend(force.dot(before, h_arrow, 0, 0.1))
                 if h_arrow.dot(after.after.pos - self.pos) < 0:
-                    delta = 0.1 * h_arrow * h_arrow.dot(self.pos - after.after.pos)
-                    forces.append(force(self, delta))
-                    forces.append(force(after.after, -delta))
+                    forces.extend(force.dot(after, h_arrow, 0, 0.1))
 
         v_arrow = self.__v_arrow()
         if v_arrow is not None:
+            # correct vertical shear of horizontal edges
             if before:
-                delta = v_arrow * v_arrow.dot(before.before.pos - self.pos)
-                delta *= 0.1
-                forces.append(force(self, delta))
-                forces.append(force(before.before, -delta))
-
+                forces.extend(force.dot(before, v_arrow, 0, 0.1))
             if after:
-                delta = v_arrow * v_arrow.dot(after.after.pos - self.pos)
-                delta *= 0.1
-                forces.append(force(self, delta))
-                forces.append(force(after.after, -delta))
+                forces.extend(force.dot(after, v_arrow, 0, 0.1))                
 
         normal = self.rs_normal()
-        if norm(normal) > 0:
-            if up and down:
-                for e in up + down:
-                    n = [ n for n in [e.before, e.after] if n is not self ][0]
-                    delta = normal * (normal.dot(n.pos - self.pos) + e.thickness*self.rs_norm*self.ks_norm) * 0.1
-                    forces.append(force(self, delta))
-                    forces.append(force(n, -delta))
-
-            if before and after:
-                for e in [before, after]:
-                    n = [ n for n in [e.before, e.after] if n is not self ][0]
-                    delta = normal * (normal.dot(n.pos - self.pos) - e.thickness*self.rs_norm*self.ks_norm) * 0.1
-                    forces.append(force(self, delta))
-                    forces.append(force(n, -delta))
+        nsign = self.rs_norm*self.ks_norm
+        # align all edges with the plane of the node, with an offset for knit/purl curl moment
+        if up and down:
+            for e in up:
+                forces.extend(force.dot(e, normal, -nsign*e.thickness, 0.1))
+            for e in down:
+                forces.extend(force.dot(e, normal, nsign*e.thickness, 0.1))
+        if before and after:
+            forces.extend(force.dot(before, normal, -nsign*before.thickness, 0.1))
+            forces.extend(force.dot(after, normal, nsign*after.thickness, 0.1))
 
         return forces
 
@@ -355,13 +335,7 @@ class edge(object):
         mesh.remove(self)
 
     def get_forces(self):
-        s = self.before.pos - self.after.pos
-        ns = norm(s)
-        n = s / ns if ns > 0 else array([0,0,0])
-        delta = self.length - ns
-        return [ force( self.before, n * delta * 0.25 ),
-                 force( self.after, n * delta * -0.25 )
-                 ]
+        return force.dot(self, self.after.pos - self.before.pos, self.length, 0.25)
 
     def draw(self, disp, full):
         if self.before and self.after and not full:
@@ -442,6 +416,16 @@ class force(object):
 
     def apply(self):
         self.node.pos = self.node.pos + self.delta
+
+    @classmethod
+    def dot(cls, e, arrow, offset, strength):
+        n = norm(arrow)
+        if n > 0:
+            arrow = arrow / n
+            delta = arrow * (arrow.dot(e.after.pos - e.before.pos) - offset) * strength
+            return [ cls(e.before, delta), cls(e.after, -delta) ]
+        else:
+            return []
 
 class display(object):
     def __init__(self):
@@ -605,6 +589,49 @@ class test:
 
         for i in range(m):
             N.knit(n*2+4)
+            N.turn()
+
+        N.cast_off()
+        mesh.relax(40*(n+m))
+        display().run()
+
+    @staticmethod
+    def rscable(n,m,k):
+        mesh.clear()
+        N = needle()
+        N.cast_on(n*2+4)
+
+        for j in range(k):
+            for i in range(m):
+                N.purl(n)
+                N.knit(4)
+                N.purl(n)
+                N.turn()
+
+                N.knit(n)
+                N.purl(4)
+                N.knit(n)
+                N.turn()
+
+            N.purl(n)
+            N.cable(2,2,1,1,1)
+            N.purl(n)
+            N.turn()
+
+            N.knit(n)
+            N.purl(4)
+            N.knit(n)
+            N.turn()
+
+        for i in range(m):
+            N.purl(n)
+            N.knit(4)
+            N.purl(n)
+            N.turn()
+
+            N.knit(n)
+            N.purl(4)
+            N.knit(n)
             N.turn()
 
         N.cast_off()
