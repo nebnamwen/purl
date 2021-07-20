@@ -158,6 +158,15 @@ class needle(object):
         for i in range(NL): self._create_node(1,1,KL)
         self._relax(NR + NL)
 
+    def slip(self, N = 1, FB = 0):
+        for i in range(N):
+            s = self.stitches.pop()
+            self.stitches.appendleft(s)
+            if self.loose_edge:
+                self.loose_edge.length += self._stitch_width()
+                if FB:
+                    over_under_force([s], [self.loose_edge], FB * self.orientation, self._yarn_thickness())
+
     def cast_off(self):
         if self.loose_edge:
             self.loose_edge.remove()
