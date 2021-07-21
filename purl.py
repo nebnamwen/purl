@@ -276,7 +276,7 @@ class node(object):
             if self.__after() is not None: edges_to_draw.append(self.__after())
 
             ks = disp.m.dot(self.ks_normal())[2]
-            if ks < 0: edges_to_draw.reverse()
+            if ks > 0: edges_to_draw.reverse()
 
             for e in edges_to_draw:
                 e.draw_half(disp, self)
@@ -439,7 +439,7 @@ class force(object):
 class display(object):
     def __init__(self):
         self.m = array([[1,0,0],[0,1,0],[0,0,1]])
-        self.center = array([100,100])
+        self.center = array([300,300])
         self.zoom = 100.0
         self.drag_xy = None
         c = Tkinter.Canvas(width=600, height=600)
@@ -466,7 +466,7 @@ class display(object):
         self.canvas.delete("all")
         if full:
             objs = [ n for n in mesh.objects if isinstance(n,node) ]
-            objs.sort(key=lambda n: self.m.dot(n.pos)[2])
+            objs.sort(key=lambda n: -self.m.dot(n.pos)[2])
         else:
             objs = mesh.objects
         for obj in objs:
@@ -474,7 +474,7 @@ class display(object):
 
     def draw_pos(self, pos):
         xyz = self.m.dot(pos)
-        return (xyz[0:2]*self.zoom + self.center)
+        return (-xyz[0:2]*self.zoom + self.center)
 
     def click(self, e):
         self.drag_xy = array([e.x, e.y])
@@ -557,6 +557,21 @@ class test:
         display().run()
 
     @staticmethod
+    def yorect(n,m):
+        mesh.clear()
+        N = needle()
+        N.cast_on(n+3)
+        N.knit(); N.yo(); N.k2tog(); N.knit(n); N.turn()
+
+        for i in range(m):
+            N.purl(n+3); N.turn()
+            N.knit(n+3); N.turn()
+
+        N.cast_off()
+        mesh.relax(5*(n+m))
+        display().run()
+
+    @staticmethod
     def k2togyo(n,m):
         mesh.clear()
         N = needle()
@@ -601,7 +616,7 @@ class test:
             N.turn()
 
         N.cast_off()
-        mesh.relax(40*(n+m))
+        mesh.relax(5*(n+m))
         display().run()
 
     @staticmethod
@@ -644,5 +659,5 @@ class test:
             N.turn()
 
         N.cast_off()
-        mesh.relax(40*(n+m))
+        mesh.relax(5*(n+m))
         display().run()
