@@ -176,6 +176,39 @@ class needle(object):
             next = self.stitches.pop()
             if next: next.remove()
 
+class tube(needle):
+    def _displace(self, pos):
+        return pos + array([0,0,1]) * self._row_height()
+
+    def _arrow(self, pos):
+        a = cross(pos, array([0,0,1])) * self.orientation
+        na = norm(a)
+        if na == 0:
+            raise ValueError
+        return a / na
+
+    def cast_on(self, N, circum=None, cinch=False):
+        if circum is None: circum = N
+        R = circum * self._stitch_width() / (2*math.pi)
+        positions = [array([math.sin(t),math.cos(t),0])*R for t in [i*math.pi*2/N for i in range(N)]]
+        for p in positions:
+            self._create_node_at(p, 0, [], 1)
+            if cinch: self.loose_edge.length *= 0.25
+
+        self.loose_edge.after = self.stitches[-1].before
+        self.stitches[-1].before.edges.append(self.loose_edge)
+        self.loose_edge = None
+
+class circle(tube):
+    def _displace(self, pos):
+        ns = norm(pos)
+        if ns == 0:
+            raise ValueError
+        return pos * (ns + self._row_height()) / ns
+
+    def cast_on(self, N):
+        tube.cast_on(self, N, cinch=True)
+
 class _mesh(object):
     def __init__(self):
         self.clear()
@@ -674,3 +707,47 @@ class test:
         N.cast_off()
         mesh.relax(5*(n+m))
         display().run()
+
+    @staticmethod
+    def circle(n):
+        mesh.clear()
+        N = circle()
+        N.cast_on(6)
+
+        for i in range(n):
+            for j in range(6):
+                N.knit()
+                N.yo()
+                N.knit(i)
+
+        N.cast_off()
+        mesh.relax(5*n)
+        display().run()
+
+    @staticmethod
+    def sock(m,n):
+        mesh.clear()
+        N = tube()
+        N.cast_on(6,circum=6*m)
+
+        for i in range(m):
+            for j in range(6):
+                N.knit()
+                N.yo()
+                N.knit(i)
+
+        for i in range(n):
+            N.knit((m+1)*6)
+
+        N.turn(); N.knit((m+1)*2)
+        N.turn(); N.purl((m+1)*2+1)
+        N.turn(); N.knit((m+1)*2+2)
+        N.turn(); N.purl((m+1)*2+3)
+
+        for i in range(n):
+            N.knit((m+1)*6)
+
+        N.cast_off()
+        mesh.relax(10*(n+m))
+        display().run()
+
