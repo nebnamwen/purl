@@ -165,7 +165,7 @@ class needle(object):
             if self.loose_edge:
                 self.loose_edge.length += self._stitch_width()
                 if FB:
-                    over_under_force([s], [self.loose_edge], FB * self.orientation, self._yarn_thickness())
+                    over_under_force([self.loose_edge], [s], FB * self.orientation, self._yarn_thickness())
 
     def cast_off(self):
         if self.loose_edge:
@@ -554,6 +554,19 @@ class test:
             N.turn()
         N.cast_off()
         mesh.relax(10*(n+m))
+        display().run()
+
+    @staticmethod
+    def slrect():
+        mesh.clear()
+        N = needle()
+        N.cast_on(10)
+        for i in range(7):
+            N.knit(3); N.slip(4,1); N.knit(3); N.turn()
+            N.purl(10); N.turn()
+        
+        N.cast_off()
+        mesh.relax(100)
         display().run()
 
     @staticmethod
