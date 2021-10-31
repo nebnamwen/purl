@@ -1,8 +1,5 @@
-import math
 from numpy import array, cross
 from numpy.linalg import norm
-import Tkinter
-from collections import deque
 
 class _mesh(object):
     def __init__(self):
