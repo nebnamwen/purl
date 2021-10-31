@@ -3,6 +3,8 @@ from numpy import array, cross
 from numpy.linalg import norm
 from collections import deque
 
+from model import node, h_edge, v_edge, over_under_force, force
+
 class needle(object):
     def __init__(self, rpi=5, spi=5, wpi=15, color="gray"):
         self.rpi = rpi

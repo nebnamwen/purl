@@ -3,6 +3,8 @@ from numpy import array, cross
 from numpy.linalg import norm
 import Tkinter
 
+from model import mesh, node
+
 class display(object):
     def __init__(self):
         self.m = array([[1,0,0],[0,1,0],[0,0,1]])

@@ -1,3 +1,7 @@
+from needle import *
+from model import mesh
+from display import display
+
 def rect(n, m):
     mesh.clear()
     N = needle()
