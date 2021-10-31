@@ -5,7 +5,7 @@ from collections import deque
 
 from model import node, h_edge, v_edge, over_under_force, force
 
-class needle(object):
+class __base(object):
     def __init__(self, rpi=5, spi=5, wpi=15, color="gray"):
         self.rpi = rpi
         self.spi = spi
@@ -21,20 +21,13 @@ class needle(object):
     def _yarn_thickness(self): return 1.0 / self.wpi
 
     def _displace(self, pos):
-        return pos + array([0,1,0]) * self._row_height()
+        raise NotImplemented
 
     def cast_on(self, N):
-        self.stitches.append(None)
-        self.turn()
-
-        positions = [array([1,0,0]) * self._stitch_width() * i for i in reversed(range(N))]
-
-        for p in positions: self._create_node_at(p, 0, [], 1)
-
-        self.turn()
+        raise NotImplemented
 
     def _arrow(self, pos):
-        return array([1,0,0]) * self.orientation
+        raise NotImplemented
 
     def _relax(self, N = 1):
         working = []
@@ -185,7 +178,24 @@ class needle(object):
             next = self.stitches.pop()
             if next: next.remove()
 
-class tube(needle):
+class flat(__base):
+    def _displace(self, pos):
+        return pos + array([0,1,0]) * self._row_height()
+
+    def cast_on(self, N):
+        self.stitches.append(None)
+        self.turn()
+
+        positions = [array([1,0,0]) * self._stitch_width() * i for i in reversed(range(N))]
+
+        for p in positions: self._create_node_at(p, 0, [], 1)
+
+        self.turn()
+
+    def _arrow(self, pos):
+        return array([1,0,0]) * self.orientation
+
+class tube(__base):
     def _displace(self, pos):
         return pos + array([0,0,1]) * self._row_height()
 

@@ -1,10 +1,10 @@
-from needle import *
+import needle
 from model import mesh
 from display import display
 
 def rect(n, m):
     mesh.clear()
-    N = needle()
+    N = needle.flat()
     N.cast_on(n)
     for i in range(m):
         N.knit(n)
@@ -15,7 +15,7 @@ def rect(n, m):
 
 def srect(n, m):
     mesh.clear()
-    N = needle()
+    N = needle.flat()
     N.cast_on(n)
     for i in range(m):
         N.knit(n)
@@ -28,7 +28,7 @@ def srect(n, m):
 
 def slrect():
     mesh.clear()
-    N = needle()
+    N = needle.flat()
     N.cast_on(10)
     for i in range(7):
         N.knit(3); N.slip(4,1); N.knit(3); N.turn()
@@ -40,7 +40,7 @@ def slrect():
 
 def yorect(n,m):
     mesh.clear()
-    N = needle()
+    N = needle.flat()
     N.cast_on(n+3)
     N.knit(); N.yo(); N.k2tog(); N.knit(n); N.turn()
 
@@ -54,7 +54,7 @@ def yorect(n,m):
 
 def k2togyo(n,m):
     mesh.clear()
-    N = needle()
+    N = needle.flat()
     N.cast_on(n*2+2)
 
     for i in range(m):
@@ -77,7 +77,7 @@ def k2togyo(n,m):
 
 def cable(n,m,k):
     mesh.clear()
-    N = needle()
+    N = needle.flat()
     N.cast_on(n*2+4)
 
     for j in range(k):
@@ -100,7 +100,7 @@ def cable(n,m,k):
 
 def rscable(n,m,k):
     mesh.clear()
-    N = needle()
+    N = needle.flat()
     N.cast_on(n*2+4)
 
     for j in range(k):
@@ -142,7 +142,7 @@ def rscable(n,m,k):
 
 def circle(n):
     mesh.clear()
-    N = circle()
+    N = needle.circle()
     N.cast_on(6)
 
     for i in range(n):
@@ -157,7 +157,7 @@ def circle(n):
 
 def sock(m,n):
     mesh.clear()
-    N = tube()
+    N = needle.tube()
     N.cast_on(6,circum=6*m)
 
     for i in range(m):
@@ -184,7 +184,7 @@ def sock(m,n):
 def bobble(n, m):
     w = 2*n + 1
     mesh.clear()
-    N = needle()
+    N = needle.flat()
     N.cast_on(w)
     for i in range(m):
         N.knit(w); N.turn()
