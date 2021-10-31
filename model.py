@@ -24,15 +24,26 @@ class _mesh(object):
 
 mesh = _mesh()
 
-class node(object):
+class meshobject(object):
+    def __init__(self):
+        self.pos = None
+        mesh.add(self)
+
+    def get_forces(self):
+        return []
+
+    def get_draw_segments(self, m):
+        return []
+
+class node(meshobject):
     def __init__(self, pos, rs_norm, ks_norm, before, below):
+        meshobject.__init__(self)
         self.pos = pos
         self.rs_norm = rs_norm
         self.ks_norm = ks_norm
         self.edges = [before] if before else []
         self.edges.extend(below)
         for e in self.edges: e.after = self
-        mesh.add(self)
 
     def get_forces(self):
         forces = []
@@ -94,17 +105,15 @@ class node(object):
 
     def ks_normal(self): return self.__get_normal(self.ks_norm)
 
-    def draw(self, disp, full):
-        if full:
-            edges_to_draw = self.__up() + self.__down()
-            if self.__before() is not None: edges_to_draw.append(self.__before())
-            if self.__after() is not None: edges_to_draw.append(self.__after())
+    def get_draw_segments(self, m):
+        edges_to_draw = self.__up() + self.__down()
+        if self.__before() is not None: edges_to_draw.append(self.__before())
+        if self.__after() is not None: edges_to_draw.append(self.__after())
 
-            ks = disp.m.dot(self.ks_normal())[2]
-            if ks > 0: edges_to_draw.reverse()
+        ks = m.dot(self.ks_normal())[2]
+        if ks > 0: edges_to_draw.reverse()
 
-            for e in edges_to_draw:
-                e.draw_half(disp, self)
+        return [ e.draw_half_segment(self) for e in edges_to_draw ]
 
     def __h_arrow(self):
         before = self.__before()
@@ -151,17 +160,17 @@ class node(object):
     def __up(self):
         return [e for e in self.edges if isinstance(e, v_edge) and e.before is self]
 
-class edge(object):
+class edge(meshobject):
     thick_mult = 0
 
     def __init__(self, before, length, color, thickness):
+        meshobject.__init__(self)
         self.before = before
         self.before.edges.append(self)
         self.after = None
         self.length = length
         self.color = color
         self.thickness = thickness
-        mesh.add(self)
 
     def remove(self):
         if self.before: self.before.edges.remove(self)
@@ -171,33 +180,11 @@ class edge(object):
     def get_forces(self):
         return force.dot(self, self.after.pos - self.before.pos, self.length, 0.25)
 
-    def draw(self, disp, full):
-        if self.before and self.after and not full:
-            p1 = disp.draw_pos(self.before.pos)
-            p2 = disp.draw_pos(self.after.pos)
-            disp.canvas.create_line([ tuple(p1), tuple(p2) ],
-                                    fill = self.color,
-                                    width = (disp.zoom * self.thickness * self.thick_mult)
-                                    )
-
-    def draw_half(self, disp, n):
+    def draw_half_segment(self, n):
         if self.before and self.after and n in (self.before, self.after):
-            p1 = disp.draw_pos(n.pos)
-            p2 = disp.draw_pos((self.before.pos + self.after.pos) / 2)
-            disp.canvas.create_line([ tuple(p1), tuple(p2) ],
-                                    fill = "black",
-                                    width = (disp.zoom * self.thickness * self.thick_mult + 1)
-                                    )
-            disp.canvas.create_line([ tuple(p1), tuple(p2) ],
-                                    fill = self.color,
-                                    width = (disp.zoom * self.thickness * self.thick_mult - 1)
-                                    )
-            p1 = disp.draw_pos(0.6*self.before.pos + 0.4*self.after.pos)
-            p2 = disp.draw_pos(0.4*self.before.pos + 0.6*self.after.pos)
-            disp.canvas.create_line([ tuple(p1), tuple(p2) ],
-                                    fill = self.color,
-                                    width = (disp.zoom * self.thickness * self.thick_mult - 2)
-                                    )
+            p1 = n.pos
+            p2 = (self.before.pos + self.after.pos) / 2
+            return draw_segment(p1, p2, self.color, self.thickness * self.thick_mult)
 
 class v_edge(edge):
     thick_mult = 2
@@ -205,13 +192,20 @@ class v_edge(edge):
 class h_edge(edge):
     thick_mult = 1
 
-class over_under_force(object):
+class draw_segment(object):
+    def __init__(self, p1, p2, color, thickness):
+        self.p1 = p1
+        self.p2 = p2
+        self.color = color
+        self.thickness = thickness
+
+class over_under_force(meshobject):
     def __init__(self, over, under, normal, thickness):
+        meshobject.__init__(self)
         self.over = over
         self.under = under
         self.normal = normal
         self.thickness = thickness
-        mesh.add(self)
 
     def draw(self, disp, full):
         pass

@@ -33,13 +33,25 @@ class display(object):
 
     def draw_all(self, full):
         self.canvas.delete("all")
+        objs = [ n for n in mesh.objects if n.pos is not None ]
         if full:
-            objs = [ n for n in mesh.objects if isinstance(n,node) ]
             objs.sort(key=lambda n: -self.m.dot(n.pos)[2])
-        else:
-            objs = mesh.objects
         for obj in objs:
-            obj.draw(self, full)
+            for s in obj.get_draw_segments(self.m):
+                self.draw_segment(s, full)
+
+    def draw_segment(self, s, full):
+        p1 = self.draw_pos(s.p1)
+        p2 = self.draw_pos(s.p2)
+        if full:
+            self.canvas.create_line([ tuple(p1), tuple(p2) ],
+                                    fill = "black",
+                                    width = (self.zoom * s.thickness + 1)
+                                    )
+        self.canvas.create_line([ tuple(p1), tuple(p2) ],
+                                fill = s.color,
+                                width = (self.zoom * s.thickness - 1)
+                                )
 
     def draw_pos(self, pos):
         xyz = self.m.dot(pos)
