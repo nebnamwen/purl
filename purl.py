@@ -147,6 +147,14 @@ class needle(object):
         self._create_node(-1,2,1)
         self._relax()
 
+    def k3tog(self):
+        self._create_node(1,3,1)
+        self._relax()
+
+    def p3tog(self):
+        self._create_node(-1,3,1)
+        self._relax()
+
     def yo(self):
         self._create_node(0,0,1)
         self.stitches[0].length = self._yarn_thickness()
@@ -746,6 +754,34 @@ class test:
 
         for i in range(n):
             N.knit((m+1)*6)
+
+        N.cast_off()
+        mesh.relax(10*(n+m))
+        display().run()
+
+    @staticmethod
+    def bobble(n, m):
+        w = 2*n + 1
+        mesh.clear()
+        N = needle()
+        N.cast_on(w)
+        for i in range(m):
+            N.knit(w); N.turn()
+            N.purl(w); N.turn()
+
+        N.knit(n)
+
+        N._create_node(1,1,5); N._relax(); N.turn()
+        N.purl(5); N.turn()
+        N.knit(5); N.turn()
+        N.p2tog(); N.purl(1); N.p2tog(); N.turn()
+        N.k3tog()
+
+        N.knit(n); N.turn()
+
+        for i in range(m):
+            N.purl(w); N.turn()
+            N.knit(w); N.turn()
 
         N.cast_off()
         mesh.relax(10*(n+m))
