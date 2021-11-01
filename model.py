@@ -199,7 +199,7 @@ class draw_segment(object):
         self.color = color
         self.thickness = thickness
 
-class over_under_force(meshobject):
+class crossover(meshobject):
     def __init__(self, over, under, normal, thickness):
         meshobject.__init__(self)
         self.over = over
@@ -211,8 +211,8 @@ class over_under_force(meshobject):
         pass
 
     def get_forces(self):
-        over_nodes = [ e.before for e in self.over ] + [ e.after for e in self.over ]
-        under_nodes = [ e.before for e in self.under ] + [ e.after for e in self.under ]
+        over_nodes = [ self.over.before, self.over.after ]
+        under_nodes = [ self.under.before, self.under.after ]
         all_nodes = over_nodes + under_nodes
         rs_normal = sum([n.rs_normal() for n in all_nodes])
         normal = rs_normal * self.normal

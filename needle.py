@@ -3,7 +3,7 @@ from numpy import array, cross
 from numpy.linalg import norm
 from collections import deque
 
-from model import node, h_edge, v_edge, over_under_force, force
+from model import node, h_edge, v_edge, crossover, force
 
 class __base(object):
     def __init__(self, rpi=5, spi=5, wpi=15, color="gray"):
@@ -15,6 +15,11 @@ class __base(object):
         self.stitches = deque()
         self.loose_edge = None
         self.orientation = 1
+
+        self.cable_stitches = deque()
+        self.cable_side = None
+
+        self._to_be_relaxed = 0
 
     def _row_height(self): return 1.0 / self.rpi
     def _stitch_width(self): return 1.0 / self.spi
@@ -29,14 +34,20 @@ class __base(object):
     def _arrow(self, pos):
         raise NotImplemented
 
-    def _relax(self, N = 1):
+    def _relax(self):
+        if not self.cable_stitches:
+            self._relax_nodes(self._find_nodes_to_relax())
+            self._to_be_relaxed = 0
+            self.cable_side = None
+        
+    def _find_nodes_to_relax(self):
         working = []
         interval = 0
 
         working.append(self.stitches[-1].before if self.stitches[-1] else None)
 
         i = 0
-        while interval < self._stitch_width() * 2 or len(working) < N + 2:
+        while interval < self._stitch_width() * 2 or len(working) < self._to_be_relaxed + 2:
             s = self.stitches[i]
             if s is None:
                 working.append(s)
@@ -51,6 +62,9 @@ class __base(object):
 
             i += 1
 
+        return working
+
+    def _relax_nodes(self, working):
         for k in range(len(working)*15):
             forces = []
             for i in range(1,len(working) - 1):
@@ -63,8 +77,21 @@ class __base(object):
                         forces.append(force(working[i], delta))
             for f in forces: f.apply()
 
-    def _create_node(self, ks_norm, pull, push, cls=None):
-        inbound = [self.stitches.pop() for i in range(pull)]
+    def _pop_stitch(self, from_cable=False):
+        q = self.cable_stitches if from_cable else self.stitches
+        s = q.pop()
+        if s is None:
+            raise ValueError
+        return s
+
+    def _push_stitch(self, s, from_cable=False):
+        self.stitches.appendleft(s)
+        if self.cable_stitches and self.cable_side and not from_cable:
+            for cs in self.cable_stitches:
+                crossover(s, cs, self.cable_side * self.orientation, self._yarn_thickness())
+
+    def _create_node(self, ks_norm, pull, push, from_cable=False, cls=None):
+        inbound = [self._pop_stitch(from_cable) for i in range(pull)]
         if not inbound:
             if self.loose_edge:
                 newpos = self.loose_edge.before.pos
@@ -72,45 +99,27 @@ class __base(object):
                 newpos = self._displace(self.stitches[-1].before.pos)
             else:
                 raise ValueError
-        elif None in inbound:
-            raise ValueError
         else:
             newpos = self._displace(sum([s.before.pos for s in inbound]) / len(inbound))
 
-        self._create_node_at(newpos, ks_norm, inbound, push, cls)
+        self._create_node_at(newpos, ks_norm, inbound, push, from_cable, cls)
 
-    def _create_node_at(self, pos, ks_norm, inbound, push, cls=None):
+        self._to_be_relaxed += 1
+        self._relax()
+
+    def _create_node_at(self, pos, ks_norm, inbound, push, from_cable=False, cls=None):
         new_node = (cls or node)(pos, self.orientation, ks_norm, self.loose_edge, inbound)
 
         for i in range(push):
-            self.stitches.appendleft(v_edge(new_node, self._stitch_width(), self.color, self._yarn_thickness()))
+            self._push_stitch(v_edge(new_node, self._stitch_width(), self.color, self._yarn_thickness()), from_cable)
 
         self.loose_edge = h_edge(new_node, self._stitch_width(), self.color, self._yarn_thickness())
 
-    def _rotate(self, N, M, RL=0):
-        working = deque()
-
-        over = []
-        under = []
-
-        for i in range(N):
-            s = self.stitches.pop()
-            if s is None: raise ValueError
-
-            if N - i <= M:
-                over.append(s)
-            else:
-                under.append(s)
-
-            working.appendleft(s)
-
-        working.rotate(M)
-
-        while working:
-            self.stitches.append(working.popleft())
-
-        if RL != 0:
-            over_under_force(over, under, RL * self.orientation, self._yarn_thickness())
+    def slip_to_cable(self, N, FB=0):
+        if N > 0:
+            for i in range(N):
+                self.cable_stitches.appendleft(self._pop_stitch())
+            self.cable_side = FB
 
     def turn(self):
         if self.loose_edge:
@@ -122,52 +131,44 @@ class __base(object):
     def knit(self, N = 1):
         for i in range(N):
             self._create_node(1,1,1)
-            self._relax()
 
     def purl(self, N = 1):
         for i in range(N):
             self._create_node(-1,1,1)
-            self._relax()
 
     def kfab(self):
         self._create_node(1,1,2)
-        self._relax()
 
     def k2tog(self):
         self._create_node(1,2,1)
-        self._relax()
 
     def p2tog(self):
         self._create_node(-1,2,1)
-        self._relax()
 
     def k3tog(self):
         self._create_node(1,3,1)
-        self._relax()
 
     def p3tog(self):
         self._create_node(-1,3,1)
-        self._relax()
 
     def yo(self):
         self._create_node(0,0,1)
         self.stitches[0].length = self._yarn_thickness()
         self._relax()
 
-    def cable(self, NR, NL, KR, KL, RL):
-        self._rotate(NR + NL, NL, RL)
-        for i in range(NR): self._create_node(1,1,KR)
-        for i in range(NL): self._create_node(1,1,KL)
-        self._relax(NR + NL)
+    def cable(self, NR, NL, KPR, KPL, FB):
+        self.slip_to_cable(NL, FB)
+        for i in range(NR): self._create_node(KPR,1,1)
+        for i in range(NL): self._create_node(KPL,1,1,from_cable=True)
 
     def slip(self, N = 1, FB = 0):
         for i in range(N):
-            s = self.stitches.pop()
-            self.stitches.appendleft(s)
+            s = self._pop_stitch()
+            self._push_stitch(s)
             if self.loose_edge:
                 self.loose_edge.length += self._stitch_width()
                 if FB:
-                    over_under_force([self.loose_edge], [s], FB * self.orientation, self._yarn_thickness())
+                    crossover(self.loose_edge, s, FB * self.orientation, self._yarn_thickness())
 
     def cast_off(self):
         if self.loose_edge:
