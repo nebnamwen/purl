@@ -158,7 +158,7 @@ def circle(n):
 def sock(m,n):
     mesh.clear()
     N = needle.tube()
-    N.cast_on(6,circum=6*m)
+    N.cast_on(6)
 
     for i in range(m):
         for j in range(6):

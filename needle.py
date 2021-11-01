@@ -196,9 +196,12 @@ class flat(__base):
     def _arrow(self, pos):
         return array([1,0,0]) * self.orientation
 
-class tube(__base):
+class circle(__base):
     def _displace(self, pos):
-        return pos + array([0,0,1]) * self._row_height()
+        ns = norm(pos)
+        if ns == 0:
+            raise ValueError
+        return pos * (ns + self._row_height()) / ns
 
     def _arrow(self, pos):
         a = cross(pos, array([0,0,1])) * self.orientation
@@ -207,9 +210,8 @@ class tube(__base):
             raise ValueError
         return a / na
 
-    def cast_on(self, N, circum=None, cinch=False):
-        if circum is None: circum = N
-        R = circum * self._stitch_width() / (2*math.pi)
+    def cast_on(self, N, cinch=False):
+        R = N * self._stitch_width() / (2*math.pi)
         positions = [array([math.sin(t),math.cos(t),0])*R for t in [i*math.pi*2/N for i in range(N)]]
         for p in positions:
             self._create_node_at(p, 0, [], 1)
@@ -219,12 +221,17 @@ class tube(__base):
         self.stitches[-1].before.edges.append(self.loose_edge)
         self.loose_edge = None
 
-class circle(tube):
+class tube(circle):
     def _displace(self, pos):
-        ns = norm(pos)
-        if ns == 0:
-            raise ValueError
-        return pos * (ns + self._row_height()) / ns
+        return pos + array([0,0,1]) * self._row_height()
 
-    def cast_on(self, N):
-        tube.cast_on(self, N, cinch=True)
+    def _relax_nodes(self, working):
+        R = len(self.stitches) * self._stitch_width() / (2*math.pi)
+        for n in working:
+            if n is not None:
+                r = norm(cross(n.pos, array([0,0,1])))
+                if r == 0:
+                    raise ValueError
+                n.pos[0:2] *= R / r
+
+        circle._relax_nodes(self, working)
