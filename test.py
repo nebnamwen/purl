@@ -1,4 +1,6 @@
 import needle
+from lang import *
+from abbrev import *
 from model import mesh
 from display import display
 
@@ -6,9 +8,7 @@ def rect(n, m):
     mesh.clear()
     N = needle.flat()
     N.cast_on(n)
-    for i in range(m):
-        N.knit(n)
-        N.turn()
+    N.do([ knit(n), turn ] * m)
     N.cast_off()
     mesh.relax(10*(n+m))
     display().run()
@@ -17,11 +17,7 @@ def srect(n, m):
     mesh.clear()
     N = needle.flat()
     N.cast_on(n)
-    for i in range(m):
-        N.knit(n)
-        N.turn()
-        N.purl(n)
-        N.turn()
+    N.do([ if_right_side(knit(n), purl(n)), turn ] * m)
     N.cast_off()
     mesh.relax(10*(n+m))
     display().run()
@@ -30,10 +26,8 @@ def slrect():
     mesh.clear()
     N = needle.flat()
     N.cast_on(10)
-    for i in range(7):
-        N.knit(3); N.slip(4,1); N.knit(3); N.turn()
-        N.purl(10); N.turn()
-        
+    N.do([ [knit(3), slip(4,wyib), knit(3), turn],
+           [purl(10), turn] ] * 7)
     N.cast_off()
     mesh.relax(100)
     display().run()
@@ -42,99 +36,31 @@ def yorect(n,m):
     mesh.clear()
     N = needle.flat()
     N.cast_on(n+3)
-    N.knit(); N.yo(); N.k2tog(); N.knit(n); N.turn()
 
-    for i in range(m):
-        N.purl(n+3); N.turn()
-        N.knit(n+3); N.turn()
+    N.do([[ k1, yo, k2tog, k(n), turn ],
+          [ if_right_side(k(n+3), p(n+3)), turn ] * m ])
 
     N.cast_off()
     mesh.relax(5*(n+m))
     display().run()
 
-def k2togyo(n,m):
+def cable(n,m,r):
+    cable = [ sl_to_cbl(2,front), k2, k2(from_cbl) ]
+
+    ss = [ if_right_side(k,p) ]
+    rs = [ if_right_side(p,k) ]
+
+    bg_row = [rs * n, ss * 4, rs * n, turn]
+
     mesh.clear()
     N = needle.flat()
-    N.cast_on(n*2+2)
 
-    for i in range(m):
-        N.knit(n*2+2)
-        N.turn()
-
-    N.knit(n)
-    N.k2tog()
-    N.yo()
-    N.knit(n)
-    N.turn()
-
-    for i in range(m):
-        N.knit(n*2+2)
-        N.turn()
-
-    N.cast_off()
-    mesh.relax(40*(n+m))
-    display().run()
-
-def cable(n,m,k):
-    mesh.clear()
-    N = needle.flat()
     N.cast_on(n*2+4)
 
-    for j in range(k):
-        for i in range(m):
-            N.knit(n*2+4)
-            N.turn()
-
-    N.knit(n)
-    N.cable(2,2,1,1,1)
-    N.knit(n)
-    N.turn()
-
-    for i in range(m):
-        N.knit(n*2+4)
-        N.turn()
-
-    N.cast_off()
-    mesh.relax(5*(n+m))
-    display().run()
-
-def rscable(n,m,k):
-    mesh.clear()
-    N = needle.flat()
-    N.cast_on(n*2+4)
-
-    for j in range(k):
-        for i in range(m):
-            N.purl(n)
-            N.knit(4)
-            N.purl(n)
-            N.turn()
-
-            N.knit(n)
-            N.purl(4)
-            N.knit(n)
-            N.turn()
-
-        N.purl(n)
-        N.cable(2,2,1,1,1)
-        N.purl(n)
-        N.turn()
-
-        N.knit(n)
-        N.purl(4)
-        N.knit(n)
-        N.turn()
-
-        for i in range(m):
-            N.purl(n)
-            N.knit(4)
-            N.purl(n)
-            N.turn()
-
-            N.knit(n)
-            N.purl(4)
-            N.knit(n)
-            N.turn()
+    N.do(bg_row,
+         [ bg_row * (m-1),
+           [rs * n, cable, rs * n, turn] ] * r,
+         bg_row * m )
 
     N.cast_off()
     mesh.relax(5*(n+m))
@@ -145,11 +71,7 @@ def circle(n):
     N = needle.circle()
     N.cast_on(6)
 
-    for i in range(n):
-        for j in range(6):
-            N.knit()
-            N.yo()
-            N.knit(i)
+    N.do([[ k, yo, k(i) ] * 6 for i in range(n)])
 
     N.cast_off()
     mesh.relax(5*n)
@@ -158,51 +80,28 @@ def circle(n):
 def sock(m,n):
     mesh.clear()
     N = needle.tube()
-    N.cast_on(6)
+    N.cast_on(6,cinch=True)
 
-    for i in range(m):
-        for j in range(6):
-            N.knit()
-            N.yo()
-            N.knit(i)
-
-    for i in range(n):
-        N.knit((m+1)*6)
-
-    N.turn(); N.knit((m+1)*2)
-    N.turn(); N.purl((m+1)*2+1)
-    N.turn(); N.knit((m+1)*2+2)
-    N.turn(); N.purl((m+1)*2+3)
-
-    for i in range(n):
-        N.knit((m+1)*6)
+    N.do([[ kfab, k(i) ] * 6 for i in range(m)],
+         [[ k(m+1) ] * 6 for i in range(n)],
+         [[ turn, [ if_right_side(p,k) ] * (2*m+2+i) ] for i in range(4)],
+         [[ k(m+1) ] * 6 for i in range(n)])
 
     N.cast_off()
     mesh.relax(10*(n+m))
     display().run()
 
-def bobble(n, m):
+def bobble(n,m,r):
     w = 2*n + 1
     mesh.clear()
     N = needle.flat()
     N.cast_on(w)
-    for i in range(m):
-        N.knit(w); N.turn()
-        N.purl(w); N.turn()
 
-    N.knit(n)
+    MB = [ into_same_stitch(k1,p1,k1), turn, p(3), turn, k3tog ]
 
-    N._create_node(1,1,5); N._relax(); N.turn()
-    N.purl(5); N.turn()
-    N.knit(5); N.turn()
-    N.p2tog(); N.purl(1); N.p2tog(); N.turn()
-    N.k3tog()
-
-    N.knit(n); N.turn()
-
-    for i in range(m):
-        N.purl(w); N.turn()
-        N.knit(w); N.turn()
+    N.do([[ if_right_side(k,p) ] * w, turn] * m,
+         [[ k(n), MB, k(n), turn ],
+          [[ if_right_side(k,p) ] * w, turn] * m] * r)
 
     N.cast_off()
     mesh.relax(10*(n+m))
