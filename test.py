@@ -106,3 +106,15 @@ def bobble(n,m,r):
     N.cast_off()
     mesh.relax(10*(n+m))
     display().run()
+
+def diamond(n):
+    mesh.clear()
+    N = needle.flat()
+    N.cast_on(3)
+
+    N.do([ [ kfab, k(i+2), turn ] for i in range(n) ],
+         [ [ k2tog, k(i+2), turn ] for i in reversed(range(n)) ])
+
+    N.cast_off()
+    mesh.relax(10*n)
+    display().run()
