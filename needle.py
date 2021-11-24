@@ -1,7 +1,8 @@
 import math
 from numpy import array, ndarray, cross
 from numpy.linalg import norm
-from collections import deque, Iterable
+from collections import deque
+from collections.abc import Iterable
 
 from model import node, h_edge, v_edge, crossover, force
 
@@ -28,7 +29,7 @@ class __base(object):
 
     def do(self, *args):
         for item in args:
-            if isinstance(item, basestring):
+            if isinstance(item, str):
                 raise TypeError
             elif isinstance(item, Iterable):
                 self.do(*item)

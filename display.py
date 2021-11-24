@@ -1,7 +1,7 @@
 import math
 from numpy import array, cross
 from numpy.linalg import norm
-import Tkinter
+import tkinter
 
 from model import mesh, node
 
@@ -11,7 +11,7 @@ class display(object):
         self.center = array([300,300])
         self.zoom = 100.0
         self.drag_xy = None
-        c = Tkinter.Canvas(width=600, height=600)
+        c = tkinter.Canvas(width=600, height=600)
         c.pack()
 
         c.bind("<Button-1>", self.click)

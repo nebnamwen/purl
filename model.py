@@ -93,7 +93,7 @@ class node(meshobject):
     def __get_normal(self, orientation):
         h_arrow = self.__h_arrow()
         v_arrow = self.__v_arrow()
-        if None in (h_arrow, v_arrow): return array([0,0,0])
+        if h_arrow is None or v_arrow is None: return array([0,0,0])
 
         crs = cross(self.__h_arrow(), self.__v_arrow()) * orientation
         n = norm(crs)
