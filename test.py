@@ -144,3 +144,51 @@ p k
     needle.cast_off()
     mesh.relax(8*(n+m))
     display().run()
+
+def hat_from_chart():
+    mesh.clear()
+    needle = needles.tube()
+    
+    section = chart(
+        {
+            "k": knit,
+            "p": purl,
+            "/": k2tog
+            },
+        """
+                     /
+                   /  k
+                 /  k p
+               /  k p k
+             /  k p k p
+           /  k p k p k
+          k k p k p k p
+         /  k k p k p k
+        k k k p k p k p
+       /  k p k p k p k
+      k k p k p k p k p
+     /  k k p k p k p k
+    k k k p k p k p k p
+   /  k p k p k p k p k
+  k k p k p k p k p k p
+ /  k k p k p k p k p k
+k k k p k p k p k p k p
+k k p k p k p k p k p k
+k k k p k p k p k p k p
+k k p k p k p k p k p k
+k k k p k p k p k p k p
+k k p k p k p k p k p k
+k k p p k k p p k k p p
+k k p p k k p p k k p p
+k k p p k k p p k k p p
+k k p p k k p p k k p p
+k k p p k k p p k k p p
+k k p p k k p p k k p p
+""")
+
+    needle.cast_on(72)
+    needle.do(section * 6)
+    needle.cast_off()
+
+    mesh.relax(150)
+    display().run()
