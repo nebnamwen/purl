@@ -1,6 +1,7 @@
 import needles
 from lang import *
 from abbrev import *
+from chart import chart
 from model import mesh
 from display import display
 
@@ -117,4 +118,29 @@ def diamond(n):
 
     N.cast_off()
     mesh.relax(10*n)
+    display().run()
+
+def moss_from_chart(n,m):
+    mesh.clear()
+    needle = needles.flat()
+    needle.cast_on(n*2 + 4)
+
+    key = {
+        "k": if_right_side(k,p),
+        "p": if_right_side(p,k)
+        }
+
+    stockinette = chart(key, "k")
+
+    moss = chart(key, """
+k p
+p k
+""")
+
+    border = stockinette ** (m*2) * 2
+
+    needle.do(border + moss ** m * n + border)
+
+    needle.cast_off()
+    mesh.relax(8*(n+m))
     display().run()

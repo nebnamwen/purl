@@ -167,6 +167,9 @@ class __base(object):
         self.stitches.reverse()
         self.orientation *= -1
 
+    def end_row(self):
+        pass
+
     def cast_off(self):
         if self.loose_edge:
             self.loose_edge.remove()
@@ -192,6 +195,9 @@ class flat(__base):
 
     def _arrow(self, pos):
         return array([1,0,0]) * self.orientation
+
+    def end_row(self):
+        self.turn()
 
 class circle(__base):
     def _displace(self, pos):
