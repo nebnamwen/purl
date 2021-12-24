@@ -1,3 +1,10 @@
+class _base_verb(object):
+    def _do(self, ndl):
+        raise NotImplementedError
+
+    def __mul__(self, n):
+        return [self] * n
+
 class _adverb(object):
     def __init__(self, key, value):
         self.key = key
@@ -8,7 +15,7 @@ back = _adverb('front_or_back', -1)
 through_back_of_loop = _adverb('through_back_of_loop', True)
 from_cable_needle = _adverb('from_cable_needle', True)
 
-class _with_color(object):
+class _with_color(_base_verb):
     def __init__(self, c, items):
         self.color = c
         self.items = items
@@ -29,12 +36,12 @@ class color(_adverb):
     def _do(self, ndl):
         ndl.color = self.color
 
-class turn(object):
+class turn(_base_verb):
     def _do(self, ndl):
         ndl.turn()
 turn = turn()
 
-class _verb_with_params(object):
+class _verb_with_params(_base_verb):
     _adverbs_allowed = []
     _init_adverb_dict = {}
 
@@ -69,7 +76,7 @@ class _repeating_verb(_verb_with_params):
             self._do_once(ndl)
 
     def _do_once(self, ndl):
-        raise NotImplemented
+        raise NotImplementedError
 
 class _clonable_verb(_verb_with_params):
 
@@ -110,7 +117,7 @@ class knit_together(_work_stitches_together):
 class purl_together(_work_stitches_together):
     _init_adverb_dict = { 'knit_or_purl': -1 }
 
-class yarnover(object):
+class yarnover(_base_verb):
     def _do(self, ndl):
         ndl.yarnover()
 yarnover = yarnover()
@@ -127,7 +134,7 @@ class slip_to_cable_needle(_verb_with_params):
     def _do(self, ndl):
         ndl.slip_to_cable_needle(self._parameter, **self._adverb_dict)
 
-class into_same_stitch(object):
+class into_same_stitch(_base_verb):
 
     def __init__(self, first, *rest):
         self._validate_first(first)
@@ -149,7 +156,7 @@ class into_same_stitch(object):
         for item in [self.first] + self.rest:
             ndl.do(item)
 
-class _work_into_same_stitch(object):
+class _work_into_same_stitch(_base_verb):
     _adverbs_allowed = [ 'knit_or_purl', 'through_back_of_loop', 'color' ]
 
     def __init__(self, verb):
@@ -166,7 +173,7 @@ class _work_into_same_stitch(object):
 knit_front_and_back = into_same_stitch(knit(1), knit(1, through_back_of_loop))
 purl_front_and_back = into_same_stitch(purl(1), purl(1, through_back_of_loop))
 
-class if_right_side(object):
+class if_right_side(_base_verb):
     ## REVIEW INTERFACE
     ## ? if_right_side([A1,A2],[B1,B2])
     ## ? if_right_side(A1,A2)(B1,B2)

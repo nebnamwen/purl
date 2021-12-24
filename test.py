@@ -18,7 +18,7 @@ def srect(n, m):
     mesh.clear()
     N = needles.flat()
     N.cast_on(n)
-    N.do([ if_right_side(knit(n), purl(n)), turn ] * m)
+    N.do([ if_right_side(knit, purl) * n, turn ] * m)
     N.cast_off()
     mesh.relax(10*(n+m))
     display().run()

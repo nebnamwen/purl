@@ -37,13 +37,13 @@ class __base(object):
                 item._do(self)
 
     def _displace(self, pos):
-        raise NotImplemented
+        raise NotImplementedError
 
     def cast_on(self, N):
-        raise NotImplemented
+        raise NotImplementedError
 
     def _arrow(self, pos):
-        raise NotImplemented
+        raise NotImplementedError
 
     def _relax(self):
         if not self.cable_stitches:
