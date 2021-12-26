@@ -2,39 +2,34 @@ import needles
 from lang import *
 from abbrev import *
 from chart import chart
-from model import mesh
 from display import display
 
 def rect(n, m):
-    mesh.clear()
     N = needles.flat()
     N.cast_on(n)
     N.do([ knit(n), turn ] * m)
     N.cast_off()
-    mesh.relax(10*(n+m))
-    display().run()
+    N.mesh.relax(10*(n+m))
+    display(N.mesh).run()
 
 def srect(n, m):
-    mesh.clear()
     N = needles.flat()
     N.cast_on(n)
     N.do([ if_right_side(knit, purl) * n, turn ] * m)
     N.cast_off()
-    mesh.relax(10*(n+m))
-    display().run()
+    N.mesh.relax(10*(n+m))
+    display(N.mesh).run()
 
 def slrect():
-    mesh.clear()
     N = needles.flat()
     N.cast_on(10)
     N.do([ [knit(3), slip(4,wyib), knit(3), turn],
            [purl(10), turn] ] * 7)
     N.cast_off()
-    mesh.relax(100)
-    display().run()
+    N.mesh.relax(100)
+    display(N.mesh).run()
 
 def yorect(n,m):
-    mesh.clear()
     N = needles.flat()
     N.cast_on(n+3)
 
@@ -42,8 +37,8 @@ def yorect(n,m):
           [ if_right_side(k(n+3), p(n+3)), turn ] * m ])
 
     N.cast_off()
-    mesh.relax(5*(n+m))
-    display().run()
+    N.mesh.relax(5*(n+m))
+    display(N.mesh).run()
 
 def cable(n,m,r):
     cable = [ sl_to_cbl(2,front), k2, k2(from_cbl) ]
@@ -53,7 +48,6 @@ def cable(n,m,r):
 
     bg_row = [rs * n, ss * 4, rs * n, turn]
 
-    mesh.clear()
     N = needles.flat()
 
     N.cast_on(n*2+4)
@@ -64,22 +58,20 @@ def cable(n,m,r):
          bg_row * m )
 
     N.cast_off()
-    mesh.relax(5*(n+m))
-    display().run()
+    N.mesh.relax(5*(n+m))
+    display(N.mesh).run()
 
 def circle(n):
-    mesh.clear()
     N = needles.circle()
     N.cast_on(6)
 
     N.do([[ k, yo, k(i) ] * 6 for i in range(n)])
 
     N.cast_off()
-    mesh.relax(5*n)
-    display().run()
+    N.mesh.relax(5*n)
+    display(N.mesh).run()
 
 def sock(m,n):
-    mesh.clear()
     N = needles.tube()
     N.cast_on(6,cinch=True)
 
@@ -89,12 +81,12 @@ def sock(m,n):
          [[ k(m+1) ] * 6 for i in range(n)])
 
     N.cast_off()
-    mesh.relax(10*(n+m))
-    display().run()
+    N.mesh.relax(10*(n+m))
+    display(N.mesh).run()
 
 def bobble(n,m,r):
     w = 2*n + 1
-    mesh.clear()
+
     N = needles.flat()
     N.cast_on(w)
 
@@ -105,11 +97,10 @@ def bobble(n,m,r):
           [[ if_right_side(k,p) ] * w, turn] * m] * r)
 
     N.cast_off()
-    mesh.relax(10*(n+m))
-    display().run()
+    N.mesh.relax(10*(n+m))
+    display(N.mesh).run()
 
 def diamond(n):
-    mesh.clear()
     N = needles.flat()
     N.cast_on(3)
 
@@ -117,11 +108,10 @@ def diamond(n):
          [ [ k2tog, k(i+2), turn ] for i in reversed(range(n)) ])
 
     N.cast_off()
-    mesh.relax(10*n)
-    display().run()
+    N.mesh.relax(10*n)
+    display(N.mesh).run()
 
 def moss_from_chart(n,m):
-    mesh.clear()
     needle = needles.flat()
     needle.cast_on(n*2 + 4)
 
@@ -142,11 +132,10 @@ p k
     needle.do(border + moss ** m * n + border)
 
     needle.cast_off()
-    mesh.relax(8*(n+m))
-    display().run()
+    needle.mesh.relax(8*(n+m))
+    display(needle.mesh).run()
 
 def hat_from_chart():
-    mesh.clear()
     needle = needles.tube()
     
     section = chart(
@@ -190,5 +179,5 @@ k k p p k k p p k k p p
     needle.do(section * 6)
     needle.cast_off()
 
-    mesh.relax(150)
-    display().run()
+    needle.mesh.relax(150)
+    display(needle.mesh).run()

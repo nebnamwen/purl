@@ -1,7 +1,7 @@
 from numpy import array, cross
 from numpy.linalg import norm
 
-class _mesh(object):
+class mesh(object):
     def __init__(self):
         self.clear()
 
@@ -22,12 +22,11 @@ class _mesh(object):
             for f in forces:
                 f.apply()
 
-mesh = _mesh()
-
 class meshobject(object):
-    def __init__(self):
+    def __init__(self, msh):
         self.pos = None
-        mesh.add(self)
+        self.mesh = msh
+        self.mesh.add(self)
 
     def get_forces(self):
         return []
@@ -36,8 +35,8 @@ class meshobject(object):
         return []
 
 class node(meshobject):
-    def __init__(self, pos, rs_norm, ks_norm, before, below):
-        meshobject.__init__(self)
+    def __init__(self, msh, pos, rs_norm, ks_norm, before, below):
+        meshobject.__init__(self, msh)
         self.pos = pos
         self.rs_norm = rs_norm
         self.ks_norm = ks_norm
@@ -163,8 +162,8 @@ class node(meshobject):
 class edge(meshobject):
     thick_mult = 0
 
-    def __init__(self, before, length, color, thickness):
-        meshobject.__init__(self)
+    def __init__(self, msh, before, length, color, thickness):
+        meshobject.__init__(self, msh)
         self.before = before
         self.before.edges.append(self)
         self.after = None
@@ -175,7 +174,7 @@ class edge(meshobject):
     def remove(self):
         if self.before: self.before.edges.remove(self)
         if self.after: self.after.edges.remove(self)
-        mesh.remove(self)
+        self.mesh.remove(self)
 
     def get_forces(self):
         return force.dot(self, self.after.pos - self.before.pos, self.length, 0.25)
@@ -200,8 +199,8 @@ class draw_segment(object):
         self.thickness = thickness
 
 class crossover(meshobject):
-    def __init__(self, over, under, normal, thickness):
-        meshobject.__init__(self)
+    def __init__(self, msh, over, under, normal, thickness):
+        meshobject.__init__(self, msh)
         self.over = over
         self.under = under
         self.normal = normal

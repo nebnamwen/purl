@@ -4,7 +4,7 @@ from numpy.linalg import norm
 from collections import deque
 from collections.abc import Iterable
 
-from model import node, h_edge, v_edge, crossover, force
+from model import mesh, node, h_edge, v_edge, crossover, force
 
 class __base(object):
     def __init__(self, rpi=5, spi=5, wpi=15, color="gray"):
@@ -12,6 +12,8 @@ class __base(object):
         self.spi = spi
         self.wpi = wpi
         self.color = color
+
+        self.mesh = mesh()
 
         self.stitches = deque()
         self.loose_edge = None
@@ -99,7 +101,7 @@ class __base(object):
         self.stitches.appendleft(s)
         if self.cable_stitches and self.cable_side and not from_cable:
             for cs in self.cable_stitches:
-                crossover(s, cs, self.cable_side * self.orientation, self._yarn_thickness())
+                crossover(self.mesh, s, cs, self.cable_side * self.orientation, self._yarn_thickness())
 
     def create_node(self, pull, push, knit_or_purl=0, through_back_of_loop=False, from_cable_needle=False, color=None, node_class=None):
         inbound = []
@@ -124,12 +126,12 @@ class __base(object):
         color = color or self.color
         node_class = node_class or node
 
-        new_node = node_class(newpos, self.orientation, knit_or_purl, self.loose_edge, inbound)
+        new_node = node_class(self.mesh, newpos, self.orientation, knit_or_purl, self.loose_edge, inbound)
 
         for i in range(push):
-            self._push_stitch(v_edge(new_node, self._row_height(), color, self._yarn_thickness()), from_cable_needle)
+            self._push_stitch(v_edge(self.mesh, new_node, self._row_height(), color, self._yarn_thickness()), from_cable_needle)
 
-        self.loose_edge = h_edge(new_node, self._stitch_width(), color, self._yarn_thickness())
+        self.loose_edge = h_edge(self.mesh, new_node, self._stitch_width(), color, self._yarn_thickness())
 
         self._current_node = new_node
 
@@ -140,7 +142,7 @@ class __base(object):
     def work_into_current_node(self, knit_or_purl=0, through_back_of_loop=False, color=None):
         if self._current_node is None:
             raise ValueError
-        self._push_stitch(v_edge(self._current_node, self._row_height(), color or self.color, self._yarn_thickness()))
+        self._push_stitch(v_edge(self.mesh, self._current_node, self._row_height(), color or self.color, self._yarn_thickness()))
 
     def slip_to_cable_needle(self, N, front_or_back=0):
         if N > 0:
@@ -158,7 +160,7 @@ class __base(object):
         if self.loose_edge:
             self.loose_edge.length += self._stitch_width()
             if front_or_back:
-                crossover(self.loose_edge, s, front_or_back * self.orientation, self._yarn_thickness())
+                crossover(self.mesh, self.loose_edge, s, front_or_back * self.orientation, self._yarn_thickness())
 
     def turn(self):
         if self.loose_edge:

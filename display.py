@@ -3,10 +3,9 @@ from numpy import array, cross
 from numpy.linalg import norm
 import tkinter
 
-from model import mesh, node
-
 class display(object):
-    def __init__(self):
+    def __init__(self, mesh):
+        self.mesh = mesh
         self.m = array([[1,0,0],[0,1,0],[0,0,1]])
         self.center = array([300,300])
         self.zoom = 100.0
@@ -33,7 +32,7 @@ class display(object):
 
     def draw_all(self, full):
         self.canvas.delete("all")
-        objs = [ n for n in mesh.objects if n.pos is not None ]
+        objs = [ n for n in self.mesh.objects if n.pos is not None ]
         if full:
             objs.sort(key=lambda n: -self.m.dot(n.pos)[2])
         for obj in objs:
