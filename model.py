@@ -214,25 +214,24 @@ class crossover(meshobject):
         under_nodes = [ self.under.before, self.under.after ]
         all_nodes = over_nodes + under_nodes
         rs_normal = sum([n.rs_normal() for n in all_nodes])
+
         normal = rs_normal * self.normal
 
         forces = []
 
         if norm(normal) > 0:
+
             normal /= norm(normal)
-            avg_dot = sum([n.pos.dot(normal) for n in all_nodes]) / len(all_nodes)
 
-            for n in over_nodes:
-                dot = n.pos.dot(normal)
-                if dot < avg_dot + self.thickness:
-                    delta = normal * (avg_dot + self.thickness - dot) * 0.1
-                    forces.append(force(n, delta))
+            over_dot = sum([n.pos.dot(normal) for n in over_nodes]) / 2
+            under_dot = sum([n.pos.dot(normal) for n in under_nodes]) / 2
 
-            for n in under_nodes:
-                dot = n.pos.dot(normal)
-                if dot > avg_dot - self.thickness:
-                    delta = normal * (avg_dot - self.thickness - dot) * 0.1
-                    forces.append(force(n, delta))
+            if over_dot - under_dot < self.thickness:
+                delta = self.thickness + under_dot - over_dot
+                for n in over_nodes:
+                    forces.append(force(n, delta * normal * 0.1))
+                for n in under_nodes:
+                    forces.append(force(n, -delta * normal * 0.1))
 
         return forces
 

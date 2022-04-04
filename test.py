@@ -181,3 +181,31 @@ k k p p k k p p k k p p
 
     needle.mesh.relax(150)
     display(needle.mesh).run()
+
+def honeycomb(m,n):
+    needle = needles.flat()
+    needle.cast_on(m*8+6)
+
+    blue = color("blue")
+
+    pattern = [
+        [
+            [ knit(m*8+6), turn ] * 4,
+            [
+                blue([ knit(2), [ slip(2,wyib), knit(6) ] * m, slip(2,wyib), knit(2), turn ]),
+                blue([ purl(2), [ slip(2,wyif), purl(6) ] * m, slip(2,wyif), purl(2), turn ]),
+                ] * 3,
+            [ knit(m*8+6), turn ] * 4,
+            [
+                blue([ knit(6), [ slip(2,wyib), knit(6) ] * m, turn ]),
+                blue([ purl(6), [ slip(2,wyif), purl(6) ] * m, turn ]),
+                ] * 3,
+            ] * n,
+        [ knit(m*8+6), turn ] * 4,
+        ]
+
+    needle.do(pattern)
+    needle.cast_off()
+
+    needle.mesh.relax(100)
+    display(needle.mesh).run()

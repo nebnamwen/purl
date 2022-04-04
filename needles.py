@@ -160,7 +160,7 @@ class __base(object):
         if self.loose_edge:
             self.loose_edge.length += self._stitch_width()
             if front_or_back:
-                crossover(self.mesh, self.loose_edge, s, front_or_back * self.orientation, self._yarn_thickness())
+                crossover(self.mesh, s, self.loose_edge, front_or_back * self.orientation, self._yarn_thickness())
 
     def turn(self):
         if self.loose_edge:
