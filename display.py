@@ -58,11 +58,13 @@ class display(object):
                                         )
             self.canvas.create_line(points,
                                     fill = "black",
-                                    width = (self.zoom * s.thickness + 1)
+                                    width = (self.zoom * s.thickness + 1),
+                                    smooth = True
                                     )
         self.canvas.create_line(points,
                                 fill = s.color,
-                                width = (self.zoom * s.thickness - 1)
+                                width = (self.zoom * s.thickness - 1),
+                                smooth = True
                                 )
         for d in dots:
             self.canvas.create_line([d, d],

@@ -100,7 +100,7 @@ class node(meshobject):
             if self._before:
                 forces.extend(force.dot(self._before, self._v_arrow, 0, 0.1))
             if self._after:
-                forces.extend(force.dot(self._after, self._v_arrow, 0, 0.1))                
+                forces.extend(force.dot(self._after, self._v_arrow, 0, 0.1))
 
         normal = self.rs_normal()
         nsign = self.rs_norm*self.ks_norm
@@ -137,13 +137,17 @@ class node(meshobject):
         ks = m.dot(self.ks_normal())[2]
         if ks > 0: edges_to_draw.reverse()
 
-        return [ e.draw_half_segment(self) for e in edges_to_draw ]
+        return sum([ e.draw_half_segments(self) for e in edges_to_draw ], [])
 
     def key_point(self, x_edge, x, y, z):
+        bef = self._before.before.pos if self._before and x_edge < 0 else self.pos
+        aft = self._after.after.pos if self._after and x_edge > 0 else self.pos
+        e = aft - bef
+
         return (self.pos +
                 e * x_edge +
-                self.__h_arrow() * x +
-                self.__v_arrow() * y +
+                self._h_arrow * x +
+                self._v_arrow * y +
                 self.ks_normal() * z)
 
     def cook_vectors(self, topo=False):
@@ -220,17 +224,45 @@ class edge(meshobject):
     def get_forces(self):
         return force.dot(self, self.after.pos - self.before.pos, self.length, 0.1)
 
-    def draw_half_segment(self, n):
-        if self.before and self.after and n in (self.before, self.after):
-            p1 = n.pos
-            p2 = (self.before.pos + self.after.pos) / 2
-            return draw_segment([p1, p1, p2], self.color, self.thickness * self.thick_mult)
+    def draw_half_segments(self, n):
+        return []
 
 class v_edge(edge):
     thick_mult = 2
 
+    def draw_half_segments(self, n):
+        if self.before and self.after and n in (self.before, self.after):
+            th = self.thickness
+            bn = self.before.rs_norm
+            an = self.after.rs_norm
+
+            p1 = self.before.key_point(-0.25*bn, 0.5*th*bn, -0.5*th, -0.5*th)
+            p2 = self.after.key_point(-0.25*an, -0.5*th*an, 0.5*th, 0)
+            p3 = self.after.key_point(0.25*an, 0.5*th*an, 0.5*th, 0)
+            p4 = self.before.key_point(0.25*bn, -0.5*th*bn, -0.5*th, -0.5*th)
+
+            if n is self.before:
+                return [
+                    draw_segment([p1, p1, (5*p1 + 3*p2)/8, (3*p1 + 5*p2)/8], self.color, self.thickness),
+                    draw_segment([p4, p4, (3*p3 + 5*p4)/8, (5*p3 + 3*p4)/8], self.color, self.thickness)
+                    ]
+            else:
+                return [
+                    draw_segment([(5*p1 + 3*p2)/8, (3*p1 + 5*p2)/8, p2, p3, (5*p3 + 3*p4)/8, (3*p3 + 5*p4)/8], self.color, self.thickness)
+                    ]
+
 class h_edge(edge):
     thick_mult = 1
+
+    def draw_half_segments(self, n):
+        if self.before and self.after and n in (self.before, self.after):
+            th = self.thickness
+            bef = self.before.key_point(0.25, -0.5*th, -0.5*th, 0.5*th)
+            aft = self.after.key_point(-0.25, 0.5*th, -0.5*th, 0.5*th)
+
+            p1 = bef if n is self.before else aft
+            p2 = (bef + aft) / 2
+            return [ draw_segment([p1, p1, p2], self.color, self.thickness) ]
 
 class draw_segment(object):
     def __init__(self, points, color, thickness):
