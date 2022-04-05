@@ -1,5 +1,6 @@
 from numpy import array, cross
 from numpy.linalg import norm
+from math import exp, log, sin, atan
 
 class mesh(object):
     def __init__(self):
@@ -17,10 +18,20 @@ class mesh(object):
     def relax(self, N=1):
         for i in range(N):
             forces = []
+
             for obj in self.objects:
                 forces.extend(obj.get_forces())
+
             for f in forces:
                 f.apply()
+
+    def center_all(self, C=array([0,0,0])):
+        nodes = [ n for n in self.objects if n.pos is not None ]
+        center = sum([n.pos for n in nodes]) / len(nodes)
+        forces = [ force(n,-center+C) for n in nodes ]
+        
+        for f in forces:
+            f.apply()
 
 class meshobject(object):
     def __init__(self, msh):
@@ -51,6 +62,18 @@ class node(meshobject):
         up = self.__up()
         before = self.__before()
         after = self.__after()
+
+        # stretch horizontally/vertically
+        tension_edges = [ e for e in [before] + up + [after] if e is not None ]
+        tension_length = sum([ e.length * e.thick_mult for e in tension_edges ])
+        tension_actual = sum([ norm(e.after.pos - e.before.pos) * e.thick_mult for e in tension_edges ])
+        tension_ratio = tension_actual / tension_length
+        # print(tension_ratio)
+        tension_ratio = exp(0.5*sin(atan(log(tension_ratio))))
+
+        for e in tension_edges:
+            delta = e.after.pos - e.before.pos
+            forces.extend(force.dot(e, delta, norm(delta) / tension_ratio, 0.25))
 
         h_arrow = self.__h_arrow()
         if h_arrow is not None:
@@ -177,7 +200,7 @@ class edge(meshobject):
         self.mesh.remove(self)
 
     def get_forces(self):
-        return force.dot(self, self.after.pos - self.before.pos, self.length, 0.25)
+        return force.dot(self, self.after.pos - self.before.pos, self.length, 0.1)
 
     def draw_half_segment(self, n):
         if self.before and self.after and n in (self.before, self.after):
