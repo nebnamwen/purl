@@ -81,7 +81,7 @@ class node(meshobject):
             delta = e.after.pos - e.before.pos
             forces.extend(force.dot(e, delta, norm(delta) / tension_ratio, 0.25))
 
-        if self._h_arrow is not None:
+        if norm(self._h_arrow) > 0:
             # correct horizontal shear of vertical edges
             for e in self._down:
                 forces.extend(force.dot(e, self._h_arrow, 0, 0.1/len(self._down)))
@@ -95,7 +95,7 @@ class node(meshobject):
                 if self._h_arrow.dot(self._after.after.pos - self.pos) < 0:
                     forces.extend(force.dot(self._after, self._h_arrow, 0, 0.1))
 
-        if self._v_arrow is not None:
+        if norm(self._v_arrow) > 0:
             # correct vertical shear of horizontal edges
             if self._before:
                 forces.extend(force.dot(self._before, self._v_arrow, 0, 0.1))
@@ -171,7 +171,7 @@ class node(meshobject):
             arrow /= n
             return arrow
         else:
-            return None
+            return array([0,0,0])
 
     def __v_arrow(self):
         up = self._up
@@ -186,7 +186,7 @@ class node(meshobject):
             arrow /= n
             return arrow
         else:
-            return None
+            return array([0,0,0])
 
     def __before(self):
         all_before = [e for e in self.edges if isinstance(e, h_edge) and e.after is self]
