@@ -1,5 +1,5 @@
 import math
-from numpy import array, cross
+from numpy import array, array_equal, cross
 from numpy.linalg import norm
 import tkinter
 
@@ -25,6 +25,8 @@ class display(object):
 
         self.canvas = c
 
+        self.mesh.cook_vectors()
+
         self.draw_all(True)
 
     def run(self):
@@ -40,21 +42,38 @@ class display(object):
                 self.draw_segment(s, full)
 
     def draw_segment(self, s, full):
-        p1 = self.draw_pos(s.p1)
-        p2 = self.draw_pos(s.p2)
+        points = s.points
+        dots = []
+        for i in (1, -1):
+            if array_equal(points[i], points[i-1]):
+                dots.append(self.draw_pos(points.pop(i)))
+        points = [ self.draw_pos(p) for p in points ]
+        
         if full:
-            self.canvas.create_line([ tuple(p1), tuple(p2) ],
+            for d in dots:
+                self.canvas.create_line([d, d],
+                                        fill = "black",
+                                        width = (self.zoom * s.thickness + 1),
+                                        capstyle=tkinter.ROUND
+                                        )
+            self.canvas.create_line(points,
                                     fill = "black",
                                     width = (self.zoom * s.thickness + 1)
                                     )
-        self.canvas.create_line([ tuple(p1), tuple(p2) ],
+        self.canvas.create_line(points,
                                 fill = s.color,
                                 width = (self.zoom * s.thickness - 1)
                                 )
+        for d in dots:
+            self.canvas.create_line([d, d],
+                                    fill = s.color,
+                                    width = (self.zoom * s.thickness - 1),
+                                    capstyle=tkinter.ROUND
+                                    )
 
     def draw_pos(self, pos):
         xyz = self.m.dot(pos)
-        return (-xyz[0:2]*self.zoom + self.center)
+        return tuple(-xyz[0:2]*self.zoom + self.center)
 
     def click(self, e):
         self.drag_xy = array([e.x, e.y])
