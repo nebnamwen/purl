@@ -25,7 +25,7 @@ class display(object):
 
         self.canvas = c
 
-        self.mesh.cook_vectors()
+        self.mesh.cook_vectors(True)
 
         self.draw_all(True)
 

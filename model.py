@@ -16,7 +16,7 @@ class mesh(object):
         self.objects.remove(obj)
 
     def relax(self, N=1):
-        self.cook_vectors()
+        self.cook_vectors(True)
 
         for i in range(N):
             forces = []
@@ -37,9 +37,9 @@ class mesh(object):
         for f in forces:
             f.apply()
 
-    def cook_vectors(self):
+    def cook_vectors(self, topo=False):
         for n in self.objects:
-            n.cook_vectors()
+            n.cook_vectors(topo)
 
 class meshobject(object):
     def __init__(self, msh):
@@ -53,7 +53,7 @@ class meshobject(object):
     def get_draw_segments(self, m):
         return []
 
-    def cook_vectors(self):
+    def cook_vectors(self, topo=False):
         pass
 
 class node(meshobject):
@@ -146,12 +146,13 @@ class node(meshobject):
                 self.__v_arrow() * y +
                 self.ks_normal() * z)
 
-    def cook_vectors(self):
-        self._before = self.__before()
-        self._after = self.__after()
+    def cook_vectors(self, topo=False):
+        if topo:
+            self._before = self.__before()
+            self._after = self.__after()
 
-        self._up = self.__up()
-        self._down = self.__down()
+            self._up = self.__up()
+            self._down = self.__down()
 
         self._h_arrow = self.__h_arrow()
         self._v_arrow = self.__v_arrow()
