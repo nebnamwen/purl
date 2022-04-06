@@ -101,7 +101,7 @@ class __base(object):
         self.stitches.appendleft(s)
         if self.cable_stitches and self.cable_side and not from_cable:
             for cs in self.cable_stitches:
-                crossover(self.mesh, s, cs, self.cable_side * self.orientation, self._yarn_thickness())
+                crossover(self.mesh, cs, s, self.cable_side * self.orientation, self._yarn_thickness()*2)
 
     def create_node(self, pull, push, knit_or_purl=0, through_back_of_loop=False, from_cable_needle=False, color=None, node_class=None):
         inbound = []
@@ -160,7 +160,7 @@ class __base(object):
         if self.loose_edge:
             self.loose_edge.length += self._stitch_width()
             if front_or_back:
-                crossover(self.mesh, s, self.loose_edge, front_or_back * self.orientation, self._yarn_thickness())
+                crossover(self.mesh, self.loose_edge, s, front_or_back * self.orientation, self._yarn_thickness()*2)
 
     def turn(self):
         if self.loose_edge:

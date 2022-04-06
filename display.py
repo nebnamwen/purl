@@ -1,6 +1,6 @@
 import math
 from numpy import array, array_equal, cross
-from numpy.linalg import norm
+from numpy.linalg import norm, det
 import tkinter
 
 class display(object):
@@ -36,7 +36,7 @@ class display(object):
         self.canvas.delete("all")
         objs = [ n for n in self.mesh.objects if n.pos is not None ]
         if full:
-            objs.sort(key=lambda n: -self.m.dot(n.pos)[2])
+            objs.sort(key=lambda n: self.m.dot(n.pos)[2])
         for obj in objs:
             for s in obj.get_draw_segments(self.m):
                 self.draw_segment(s, full)
@@ -118,7 +118,9 @@ class display(object):
 
         dx, dy = xy
 
-        T = array([[1,0,dx],[0,1,dy],[-dx,-dy,1]])
+        T = array([[1,   0, -dx],
+                   [0,   1, -dy],
+                   [dx, dy,   1]])
 
         self.m = T.dot(self.m)
 

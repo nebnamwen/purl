@@ -130,15 +130,16 @@ class node(meshobject):
 
         normal = self.rs_normal()
         nsign = self.rs_norm*self.ks_norm
+
         # align all edges with the plane of the node, with an offset for knit/purl curl moment
         if self._up and self._down:
             for e in self._up:
-                forces.extend(force.dot(e, normal, -nsign*e.thickness, 0.1))
-            for e in self._down:
                 forces.extend(force.dot(e, normal, nsign*e.thickness, 0.1))
+            for e in self._down:
+                forces.extend(force.dot(e, normal, -nsign*e.thickness, 0.1))
         if self._before and self._after:
-            forces.extend(force.dot(self._before, normal, -nsign*self._before.thickness, 0.1))
-            forces.extend(force.dot(self._after, normal, nsign*self._after.thickness, 0.1))
+            forces.extend(force.dot(self._before, normal, nsign*self._before.thickness, 0.1))
+            forces.extend(force.dot(self._after, normal, -nsign*self._after.thickness, 0.1))
 
         return forces
 
@@ -255,8 +256,8 @@ class yo_node(node):
         points = []
 
         if self._before:
-            bef_bef = self._before.before.key_point(0.25, -0.5*th, -0.5*th, 0.5*th)
-            bef_aft = self.key_point(-0.25, 0.5*th, -0.5*th, 0.5*th)
+            bef_bef = self._before.before.key_point(0.25, -0.5*th, -0.5*th, -0.5*th)
+            bef_aft = self.key_point(-0.25, 0.5*th, -0.5*th, -0.5*th)
 
             points.extend([ (bef_bef + bef_aft)/2, (bef_bef*3 + bef_aft*5)/8 ])
         else:
@@ -265,10 +266,10 @@ class yo_node(node):
         if self._up:
             twist = self.rs_norm * self._up[0].after.rs_norm
 
-            p1 = self.key_point(-0.25, 0.5*th, -0.5*th, -0.5*th)
+            p1 = self.key_point(-0.25, 0.5*th, -0.5*th, 0.5*th)
             p2 = self._up[0].after.key_point(-0.25*twist, -0.5*th*twist, 0.5*th, 0)
             p3 = self._up[0].after.key_point(0.25*twist, 0.5*th*twist, 0.5*th, 0)
-            p4 = self.key_point(0.25, -0.5*th, -0.5*th, -0.5*th)
+            p4 = self.key_point(0.25, -0.5*th, -0.5*th, 0.5*th)
 
             points.extend([(5*p1 + 3*p2)/8, (3*p1 + 5*p2)/8])
             segments.append(draw_segment(points, e.color, e.thickness))
@@ -318,10 +319,10 @@ class v_edge(edge):
             bn = self.before.rs_norm
             an = self.after.rs_norm
 
-            p1 = self.before.key_point(-0.25*bn, 0.5*th*bn, -0.5*th, -0.5*th)
+            p1 = self.before.key_point(-0.25*bn, 0.5*th*bn, -0.5*th, 0.5*th)
             p2 = self.after.key_point(-0.25*an, -0.5*th*an, 0.5*th, 0)
             p3 = self.after.key_point(0.25*an, 0.5*th*an, 0.5*th, 0)
-            p4 = self.before.key_point(0.25*bn, -0.5*th*bn, -0.5*th, -0.5*th)
+            p4 = self.before.key_point(0.25*bn, -0.5*th*bn, -0.5*th, 0.5*th)
 
             if n is self.before:
                 return [
@@ -339,8 +340,8 @@ class h_edge(edge):
     def draw_half_segments(self, n):
         if self.before and self.after and n in (self.before, self.after):
             th = self.thickness
-            bef = self.before.key_point(0.25, -0.5*th, -0.5*th, 0.5*th)
-            aft = self.after.key_point(-0.25, 0.5*th, -0.5*th, 0.5*th)
+            bef = self.before.key_point(0.25, -0.5*th, -0.5*th, -0.5*th)
+            aft = self.after.key_point(-0.25, 0.5*th, -0.5*th, -0.5*th)
 
             p1 = bef if n is self.before else aft
             p2 = (bef + aft) / 2
