@@ -4,7 +4,7 @@ from numpy.linalg import norm
 from collections import deque
 from collections.abc import Iterable
 
-from model import mesh, node, h_edge, v_edge, crossover, force
+from model import mesh, node, yo_node, h_edge, v_edge, crossover, force
 
 class __base(object):
     def __init__(self, rpi=5, spi=5, wpi=15, color="gray"):
@@ -151,7 +151,7 @@ class __base(object):
             self.cable_side = front_or_back
 
     def yarnover(self):
-        self.create_node(0, 1)
+        self.create_node(0, 1, node_class=yo_node)
         self.stitches[0].length = self._yarn_thickness()
 
     def slip_stitch(self, front_or_back=0):

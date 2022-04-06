@@ -67,6 +67,11 @@ class node(meshobject):
         for e in self.edges: e.after = self
 
     def get_forces(self):
+        return (self._tension_forces() + self._hshear_forces() + self._hfold_forces() +
+                self._vshear_forces() + self._flatten_forces()
+                )
+
+    def _tension_forces(self):
         forces = []
 
         # stretch horizontally/vertically
@@ -81,6 +86,11 @@ class node(meshobject):
             delta = e.after.pos - e.before.pos
             forces.extend(force.dot(e, delta, norm(delta) / tension_ratio, 0.25))
 
+        return forces
+
+    def _hshear_forces(self):
+        forces = []
+
         if norm(self._h_arrow) > 0:
             # correct horizontal shear of vertical edges
             for e in self._down:
@@ -88,6 +98,12 @@ class node(meshobject):
             for e in self._up:
                 forces.extend(force.dot(e, self._h_arrow, 0, 0.1/len(self._up)))
 
+        return forces
+
+    def _hfold_forces(self):
+        forces = []
+
+        if norm(self._h_arrow) > 0:
             # correct foldover of horizontal edges
             if self._before and self._after:
                 if self._h_arrow.dot(self.pos - self._before.before.pos) < 0:
@@ -95,12 +111,22 @@ class node(meshobject):
                 if self._h_arrow.dot(self._after.after.pos - self.pos) < 0:
                     forces.extend(force.dot(self._after, self._h_arrow, 0, 0.1))
 
+        return forces
+
+    def _vshear_forces(self):
+        forces = []
+
         if norm(self._v_arrow) > 0:
             # correct vertical shear of horizontal edges
             if self._before:
                 forces.extend(force.dot(self._before, self._v_arrow, 0, 0.1))
             if self._after:
                 forces.extend(force.dot(self._after, self._v_arrow, 0, 0.1))
+
+        return forces
+
+    def _flatten_forces(self):
+        forces = []
 
         normal = self.rs_normal()
         nsign = self.rs_norm*self.ks_norm
@@ -203,6 +229,62 @@ class node(meshobject):
 
     def __up(self):
         return [e for e in self.edges if isinstance(e, v_edge) and e.before is self]
+
+class yo_node(node):
+
+    def _vshear_forces(self):
+        return []
+
+    def get_draw_segments(self, m):
+        
+        if self._up:
+            if len(self._up) == 1:
+                e = self._up[0]
+            else:
+                raise ValueError("yarnover with multiple stitches")
+        elif self._after:
+            e = self._after
+        elif self._before:
+            e = self._before
+        else:
+            raise ValueError("yarnover with no edges")
+
+        th = e.thickness
+
+        segments = []
+        points = []
+
+        if self._before:
+            bef_bef = self._before.before.key_point(0.25, -0.5*th, -0.5*th, 0.5*th)
+            bef_aft = self.key_point(-0.25, 0.5*th, -0.5*th, 0.5*th)
+
+            points.extend([ (bef_bef + bef_aft)/2, (bef_bef*3 + bef_aft*5)/8 ])
+        else:
+            points.append(self.pos)
+
+        if self._up:
+            twist = self.rs_norm * self._up[0].after.rs_norm
+
+            p1 = self.key_point(-0.25, 0.5*th, -0.5*th, -0.5*th)
+            p2 = self._up[0].after.key_point(-0.25*twist, -0.5*th*twist, 0.5*th, 0)
+            p3 = self._up[0].after.key_point(0.25*twist, 0.5*th*twist, 0.5*th, 0)
+            p4 = self.key_point(0.25, -0.5*th, -0.5*th, -0.5*th)
+
+            points.extend([(5*p1 + 3*p2)/8, (3*p1 + 5*p2)/8])
+            segments.append(draw_segment(points, e.color, e.thickness))
+            points = [(5*p3 + 3*p4)/8, (3*p3 + 5*p4)/8]
+
+        if self._after:
+            aft_bef = self.key_point(0.25, -0.5*th, -0.5*th, 0.5*th)
+            aft_aft = self._after.after.key_point(-0.25, 0.5*th, -0.5*th, 0.5*th)
+
+            points.extend([ (5*aft_bef + 3*aft_aft)/8, (aft_bef + aft_aft)/2 ])
+        else:
+            points.append(self.pos)
+
+        segments.append(draw_segment(points, e.color, e.thickness))
+
+        return segments
 
 class edge(meshobject):
     thick_mult = 0
