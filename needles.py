@@ -229,7 +229,7 @@ class circle(__base):
 
 class tube(circle):
     def _displace(self, pos):
-        return pos + Z * self._row_height()
+        return pos - Z * self._row_height()
 
     def _relax_nodes(self, working):
         R = len(self.stitches) * self._stitch_width() / (2*math.pi)
