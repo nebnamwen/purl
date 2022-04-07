@@ -3,10 +3,12 @@ from numpy import array, array_equal, cross
 from numpy.linalg import norm, det
 import tkinter
 
+from vectors import *
+
 class display(object):
     def __init__(self, mesh):
         self.mesh = mesh
-        self.m = array([[1,0,0],[0,1,0],[0,0,1]])
+        self.m = I
         self.center = array([300,300])
         self.zoom = 100.0
         self.drag_xy = None
@@ -118,9 +120,7 @@ class display(object):
 
         dx, dy = xy
 
-        T = array([[1,   0, -dx],
-                   [0,   1, -dy],
-                   [dx, dy,   1]])
+        T = I + dx*rotX + dy*rotY
 
         self.m = T.dot(self.m)
 

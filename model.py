@@ -1,6 +1,8 @@
-from numpy import array, cross
+from numpy import cross
 from numpy.linalg import norm
 from math import exp, log, sin, atan
+
+from vectors import zero
 
 class mesh(object):
     def __init__(self):
@@ -29,7 +31,7 @@ class mesh(object):
 
             self.cook_vectors()
 
-    def center_all(self, C=array([0,0,0])):
+    def center_all(self, C=zero):
         nodes = [ n for n in self.objects if n.pos is not None ]
         center = sum([n.pos for n in nodes]) / len(nodes)
         forces = [ force(n,-center+C) for n in nodes ]
@@ -144,7 +146,7 @@ class node(meshobject):
         return forces
 
     def __get_normal(self, orientation):
-        if self._h_arrow is None or self._v_arrow is None: return array([0,0,0])
+        if self._h_arrow is None or self._v_arrow is None: return zero
 
         crs = cross(self._h_arrow, self._v_arrow) * orientation
         n = norm(crs)
@@ -198,7 +200,7 @@ class node(meshobject):
             arrow /= n
             return arrow
         else:
-            return array([0,0,0])
+            return zero
 
     def __v_arrow(self):
         up = self._up
@@ -213,7 +215,7 @@ class node(meshobject):
             arrow /= n
             return arrow
         else:
-            return array([0,0,0])
+            return zero
 
     def __before(self):
         all_before = [e for e in self.edges if isinstance(e, h_edge) and e.after is self]

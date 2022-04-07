@@ -1,10 +1,11 @@
 import math
-from numpy import array, ndarray, cross
+from numpy import ndarray, cross
 from numpy.linalg import norm
 from collections import deque
 from collections.abc import Iterable
 
 from model import mesh, node, yo_node, h_edge, v_edge, crossover, force
+from vectors import X, Y, Z
 
 class __base(object):
     def __init__(self, rpi=5, spi=5, wpi=15, color="gray"):
@@ -183,20 +184,20 @@ class __base(object):
 
 class flat(__base):
     def _displace(self, pos):
-        return pos + array([0,1,0]) * self._row_height()
+        return pos + Y*self._row_height()
 
     def cast_on(self, N):
         self.stitches.append(None)
         self.turn()
 
-        positions = [array([1,0,0]) * self._stitch_width() * i for i in reversed(range(N))]
+        positions = [X * self._stitch_width() * i for i in reversed(range(N))]
 
         for p in positions: self.create_node(p, 1)
 
         self.turn()
 
     def _arrow(self, pos):
-        return array([1,0,0]) * self.orientation
+        return X * self.orientation
 
     def end_row(self):
         self.turn()
@@ -209,7 +210,7 @@ class circle(__base):
         return pos * (ns + self._row_height()) / ns
 
     def _arrow(self, pos):
-        a = cross(pos, array([0,0,1])) * self.orientation
+        a = cross(pos, Z) * self.orientation
         na = norm(a)
         if na == 0:
             raise ValueError
@@ -217,7 +218,7 @@ class circle(__base):
 
     def cast_on(self, N, cinch=False):
         R = N * self._stitch_width() / (2*math.pi)
-        positions = [array([math.sin(t),math.cos(t),0])*R for t in [i*math.pi*2/N for i in range(N)]]
+        positions = [(math.sin(t)*X + math.cos(t)*Y)*R for t in [i*math.pi*2/N for i in range(N)]]
         for p in positions:
             self.create_node(p, 1)
             if cinch: self.loose_edge.length *= 0.25
@@ -228,13 +229,13 @@ class circle(__base):
 
 class tube(circle):
     def _displace(self, pos):
-        return pos + array([0,0,1]) * self._row_height()
+        return pos + Z * self._row_height()
 
     def _relax_nodes(self, working):
         R = len(self.stitches) * self._stitch_width() / (2*math.pi)
         for n in working:
             if n is not None:
-                r = norm(cross(n.pos, array([0,0,1])))
+                r = norm(cross(n.pos, Z))
                 if r == 0:
                     raise ValueError
                 n.pos[0:2] *= R / r
