@@ -8,7 +8,8 @@ def rect(n, m):
     N = needles.flat()
     N.cast_on(n)
     N.do([ knit(n), turn ] * m)
-    N.cast_off()
+    N.bind_off_row()
+
     N.mesh.relax(10*(n+m))
     display(N.mesh).run()
 
@@ -16,7 +17,8 @@ def srect(n, m):
     N = needles.flat()
     N.cast_on(n)
     N.do([ if_right_side(knit, purl) * n, turn ] * m)
-    N.cast_off()
+    N.bind_off_row()
+
     N.mesh.relax(10*(n+m))
     display(N.mesh).run()
 
@@ -25,7 +27,8 @@ def slrect():
     N.cast_on(10)
     N.do([ [knit(3), slip(4,wyib), knit(3), turn],
            [purl(10), turn] ] * 7)
-    N.cast_off()
+    N.bind_off_row()
+
     N.mesh.relax(100)
     display(N.mesh).run()
 
@@ -36,7 +39,8 @@ def yorect(n,m):
     N.do([[ k1, yo, k2tog, k(n), turn ],
           [ if_right_side(k(n+3), p(n+3)), turn ] * m ])
 
-    N.cast_off()
+    N.bind_off_row()
+
     N.mesh.relax(5*(n+m))
     display(N.mesh).run()
 
@@ -57,7 +61,8 @@ def cable(n,m,r):
            [rs * n, cable, rs * n, turn] ] * r,
          bg_row * m )
 
-    N.cast_off()
+    N.bind_off_row()
+
     N.mesh.relax(5*(n+m))
     display(N.mesh).run()
 
@@ -67,7 +72,8 @@ def circle(n):
 
     N.do([[ k, yo, k(i) ] * 6 for i in range(n)])
 
-    N.cast_off()
+    N.bind_off_row()
+
     N.mesh.relax(5*n)
     display(N.mesh).run()
 
@@ -80,7 +86,8 @@ def sock(m,n):
          [[ turn, [ if_right_side(p,k) ] * (2*m+2+i) ] for i in range(4)],
          [[ k(m+1) ] * 6 for i in range(n)])
 
-    N.cast_off()
+    N.bind_off_row()
+
     N.mesh.relax(10*(n+m))
     display(N.mesh).run()
 
@@ -96,7 +103,8 @@ def bobble(n,m,r):
          [[ k(n), MB, k(n), turn ],
           [[ if_right_side(k,p) ] * w, turn] * m] * r)
 
-    N.cast_off()
+    N.bind_off_row()
+
     N.mesh.relax(10*(n+m))
     display(N.mesh).run()
 
@@ -107,7 +115,8 @@ def diamond(n):
     N.do([ [ kfab, k(i+2), turn ] for i in range(n) ],
          [ [ k2tog, k(i+2), turn ] for i in reversed(range(n)) ])
 
-    N.cast_off()
+    N.bind_off_row()
+
     N.mesh.relax(10*n)
     display(N.mesh).run()
 
@@ -131,7 +140,8 @@ p k
 
     needle.do(border + moss ** m * n + border)
 
-    needle.cast_off()
+    needle.bind_off_row()
+
     needle.mesh.relax(8*(n+m))
     display(needle.mesh).run()
 
@@ -177,7 +187,7 @@ k k p p k k p p k k p p
 
     needle.cast_on(72)
     needle.do(section * 6)
-    needle.cast_off()
+    needle.bind_off_row()
 
     needle.mesh.relax(150)
     display(needle.mesh).run()
@@ -205,7 +215,7 @@ def honeycomb(m,n):
         ]
 
     needle.do(pattern)
-    needle.cast_off()
+    needle.bind_off_row()
 
     needle.mesh.relax(20)
     display(needle.mesh).run()

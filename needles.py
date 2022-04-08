@@ -63,6 +63,7 @@ class __base(object):
         i = 0
         while interval < self._stitch_width() * 2 or len(working) < self._to_be_relaxed + 2:
             s = self.stitches[i]
+
             if s is None:
                 working.append(s)
                 interval = self._stitch_width() * 2
@@ -136,7 +137,7 @@ class __base(object):
 
         self._current_node = new_node
 
-        if isinstance(pull, int):
+        if isinstance(pull, int) and push > 0:
             self._to_be_relaxed += 1
             self._relax()
 
@@ -163,24 +164,27 @@ class __base(object):
             if front_or_back:
                 crossover(self.mesh, self.loose_edge, s, front_or_back * self.orientation, self._yarn_thickness()*2)
 
-    def turn(self):
+    def _trim_loose_edge(self):
         if self.loose_edge:
             self.loose_edge.remove()
-            self.loose_edge = None
+            self.loose_edge = None            
+
+    def turn(self):
+        self._trim_loose_edge()
         self.stitches.reverse()
         self.orientation *= -1
 
     def end_row(self):
         pass
 
-    def cast_off(self):
-        if self.loose_edge:
-            self.loose_edge.remove()
-            self.loose_edge = None
+    def bind_off_row(self, knit_or_purl=0):
+        n = len([s for s in self.stitches if s is not None])
+        for i in range(n):
+            self.bind_off_stitch(knit_or_purl=knit_or_purl)
+        self._trim_loose_edge()
 
-        while self.stitches:
-            next = self.stitches.pop()
-            if next: next.remove()
+    def bind_off_stitch(self, knit_or_purl=0):
+        self.create_node(1, 0, knit_or_purl=knit_or_purl, node_class=bindoff_node)
 
 class flat(__base):
     def _displace(self, pos):
