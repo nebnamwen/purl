@@ -233,7 +233,7 @@ class node(meshobject):
     def __up(self):
         return [e for e in self.edges if isinstance(e, v_edge) and e.before is self]
 
-class yo_node(node):
+class yarnover_node(node):
 
     def _vshear_forces(self):
         return []
