@@ -31,13 +31,16 @@ class __base(object):
     def _yarn_thickness(self): return 1.0 / self.wpi
 
     def do(self, *args):
+        result = []
         for item in args:
             if isinstance(item, str):
                 raise TypeError
             elif isinstance(item, Iterable):
-                self.do(*item)
+                result.extend(self.do(*item))
             else:
-                item._do(self)
+                result.extend(item._do(self))
+
+        return result
 
     def _displace(self, pos):
         raise NotImplementedError
@@ -141,20 +144,25 @@ class __base(object):
             self._to_be_relaxed += 1
             self._relax()
 
+        return [new_node]
+
     def work_into_current_node(self, knit_or_purl=0, through_back_of_loop=False, color=None):
         if self._current_node is None:
             raise ValueError
         self._push_stitch(v_edge(self.mesh, self._current_node, self._row_height(), color or self.color, self._yarn_thickness()))
+        return []
 
     def slip_to_cable_needle(self, N, front_or_back=0):
         if N > 0:
             for i in range(N):
                 self.cable_stitches.appendleft(self._pop_stitch())
             self.cable_side = front_or_back
+        return []
 
     def yarnover(self):
-        self.create_node(0, 1, node_class=yarnover_node)
+        result = self.create_node(0, 1, node_class=yarnover_node)
         self.stitches[0].length = self._yarn_thickness()
+        return result
 
     def slip_stitch(self, front_or_back=0):
         s = self._pop_stitch()
@@ -163,6 +171,7 @@ class __base(object):
             self.loose_edge.length += self._stitch_width()
             if front_or_back:
                 crossover(self.mesh, self.loose_edge, s, front_or_back * self.orientation, self._yarn_thickness()*2)
+        return []
 
     def _trim_loose_edge(self):
         if self.loose_edge:
@@ -178,13 +187,15 @@ class __base(object):
         pass
 
     def bind_off_row(self, knit_or_purl=0):
+        result = []
         n = len([s for s in self.stitches if s is not None])
         for i in range(n):
-            self.bind_off_stitch(knit_or_purl=knit_or_purl)
+            result.extend(self.bind_off_stitch(knit_or_purl=knit_or_purl))
         self._trim_loose_edge()
+        return result
 
     def bind_off_stitch(self, knit_or_purl=0):
-        self.create_node(1, 0, knit_or_purl=knit_or_purl, node_class=bindoff_node)
+        return self.create_node(1, 0, knit_or_purl=knit_or_purl, node_class=bindoff_node)
 
 class flat(__base):
     def _displace(self, pos):
@@ -196,9 +207,12 @@ class flat(__base):
 
         positions = [X * self._stitch_width() * i for i in reversed(range(N))]
 
-        for p in positions: self.create_node(p, 1)
+        result = []
+        for p in positions:
+            result.extend(self.create_node(p, 1))
 
         self.turn()
+        return result
 
     def _arrow(self, pos):
         return X * self.orientation
@@ -223,13 +237,15 @@ class circle(__base):
     def cast_on(self, N, cinch=False):
         R = N * self._stitch_width() / (2*math.pi)
         positions = [(math.sin(t)*X + math.cos(t)*Y)*R for t in [i*math.pi*2/N for i in range(N)]]
+        result = []
         for p in positions:
-            self.create_node(p, 1)
+            result.extend(self.create_node(p, 1))
             if cinch: self.loose_edge.length *= 0.25
 
         self.loose_edge.after = self.stitches[-1].before
         self.stitches[-1].before.edges.append(self.loose_edge)
         self.loose_edge = None
+        return result
 
 class tube(circle):
     def _displace(self, pos):

@@ -43,6 +43,9 @@ class mesh(object):
         for n in self.objects:
             n.cook_vectors(topo)
 
+    def block(self, nodes, f):
+        return block_force(self, nodes, f)
+
 class meshobject(object):
     def __init__(self, msh):
         self.pos = None
@@ -394,6 +397,15 @@ class crossover(meshobject):
                     forces.append(force(n, -delta * normal * 0.1))
 
         return forces
+
+class block_force(meshobject):
+    def __init__(self, msh, nodes, f):
+        meshobject.__init__(self, msh)
+        self.nodes = nodes
+        self.f = f
+
+    def get_forces(self):
+        return [ force(n, self.f(n)) for n in self.nodes ]
 
 class force(object):
     def __init__(self, N, D):

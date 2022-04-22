@@ -31,10 +31,12 @@ class chart(object):
         return rows
 
     def _do(self, needle):
+        result = []
         for row in self.rows:
             oriented_row = row if needle.orientation == 1 else reversed(row)
-            needle.do(oriented_row)
+            result.extend(needle.do(oriented_row))
             needle.end_row()
+        return result
 
     def __add__(self, other):
         if len(self.rows) != len(other.rows):

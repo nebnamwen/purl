@@ -1,6 +1,7 @@
 import needles
 from lang import *
 from abbrev import *
+from vectors import *
 from chart import chart
 from display import display
 
@@ -194,13 +195,13 @@ k k p p k k p p k k p p
 
 def honeycomb(m,n):
     needle = needles.flat()
-    needle.cast_on(m*8+6)
+    bottom_edge = needle.cast_on(m*8+6)
 
     blue = color("blue")
 
     pattern = [
         [
-            [ knit(m*8+6), turn ] * 2,
+            [ knit(m*8+6), turn ] * 4,
             [
                 blue([ knit(2), [ slip(2,wyib), knit(6) ] * m, slip(2,wyib), knit(2), turn ]),
                 blue([ purl(2), [ slip(2,wyif), purl(6) ] * m, slip(2,wyif), purl(2), turn ]),
@@ -211,11 +212,14 @@ def honeycomb(m,n):
                 blue([ purl(6), [ slip(2,wyif), purl(6) ] * m, turn ]),
                 ] * 3,
             ] * n,
-        [ knit(m*8+6), turn ] * 2,
+        [ knit(m*8+6), turn ] * 4,
         ]
 
     needle.do(pattern)
-    needle.bind_off_row()
+    top_edge = needle.bind_off_row()
 
-    needle.mesh.relax(20)
+    needle.mesh.block(top_edge, lambda n: Y*0.02)
+    needle.mesh.block(bottom_edge, lambda n: -Y*0.02)
+
+    needle.mesh.relax(100)
     display(needle.mesh).run()

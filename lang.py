@@ -23,8 +23,12 @@ class _with_color(_base_verb):
     def _do(self, ndl):
         old_color = ndl.color
         ndl.color = self.color
-        ndl.do(*self.items)
+
+        result = ndl.do(*self.items)
+
         ndl.color = old_color
+
+        return result
 
 class color(_adverb):
     def __init__(self, raw_color):
@@ -39,6 +43,7 @@ class color(_adverb):
 class turn(_base_verb):
     def _do(self, ndl):
         ndl.turn()
+        return []
 turn = turn()
 
 class _verb_with_params(_base_verb):
@@ -72,8 +77,10 @@ class _verb_with_params(_base_verb):
 class _repeating_verb(_verb_with_params):
 
     def _do(self, ndl):
+        result = []
         for i in range(1 if self._parameter is None else self._parameter):
-            self._do_once(ndl)
+            result.extend(self._do_once(ndl))
+        return result
 
     def _do_once(self, ndl):
         raise NotImplementedError
@@ -95,7 +102,7 @@ class _work_one_stitch(_repeating_verb, _clonable_verb):
     _adverbs_allowed = _work_stitch_adverbs_allowed
 
     def _do_once(self, ndl):
-        ndl.create_node(1, 1, **self._adverb_dict)
+        return ndl.create_node(1, 1, **self._adverb_dict)
 
 class knit(_work_one_stitch):
     _init_adverb_dict = { 'knit_or_purl': 1 }
@@ -109,7 +116,7 @@ class _work_stitches_together(_clonable_verb):
     _adverbs_allowed = _work_stitch_adverbs_allowed
 
     def _do(self, ndl):
-        ndl.create_node(self._parameter, 1, **self._adverb_dict)
+        return ndl.create_node(self._parameter, 1, **self._adverb_dict)
 
 class knit_together(_work_stitches_together):
     _init_adverb_dict = { 'knit_or_purl': 1 }
@@ -119,20 +126,20 @@ class purl_together(_work_stitches_together):
 
 class yarnover(_base_verb):
     def _do(self, ndl):
-        ndl.yarnover()
+        return ndl.yarnover()
 yarnover = yarnover()
 
 class slip(_repeating_verb, _clonable_verb):
     _adverbs_allowed = [ 'front_or_back' ]
 
     def _do_once(self, ndl):
-        ndl.slip_stitch(**self._adverb_dict)
+        return ndl.slip_stitch(**self._adverb_dict)
 
 class slip_to_cable_needle(_verb_with_params):
     _adverbs_allowed = [ 'front_or_back' ]
 
     def _do(self, ndl):
-        ndl.slip_to_cable_needle(self._parameter, **self._adverb_dict)
+        return ndl.slip_to_cable_needle(self._parameter, **self._adverb_dict)
 
 class into_same_stitch(_base_verb):
 
@@ -153,8 +160,10 @@ class into_same_stitch(_base_verb):
         pass
 
     def _do(self, ndl):
+        result = []
         for item in [self.first] + self.rest:
-            ndl.do(item)
+            result.extend(ndl.do(item))
+        return result
 
 class _work_into_same_stitch(_base_verb):
     _adverbs_allowed = [ 'knit_or_purl', 'through_back_of_loop', 'color' ]
@@ -168,7 +177,7 @@ class _work_into_same_stitch(_base_verb):
         pass
 
     def _do(self, ndl):
-        ndl.work_into_current_node(**self._adverb_dict)
+        return ndl.work_into_current_node(**self._adverb_dict)
 
 knit_front_and_back = into_same_stitch(knit(1), knit(1, through_back_of_loop))
 purl_front_and_back = into_same_stitch(purl(1), purl(1, through_back_of_loop))
@@ -184,6 +193,6 @@ class if_right_side(_base_verb):
 
     def _do(self, ndl):
         if ndl.orientation == 1:
-            ndl.do(self.right_side)
+            return ndl.do(self.right_side)
         else:
-            ndl.do(self.wrong_side)
+            return ndl.do(self.wrong_side)
