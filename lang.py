@@ -12,7 +12,6 @@ class _adverb(object):
 
 front = _adverb('front_or_back', 1)
 back = _adverb('front_or_back', -1)
-through_back_of_loop = _adverb('through_back_of_loop', True)
 from_cable_needle = _adverb('from_cable_needle', True)
 
 class _with_color(_base_verb):
@@ -96,7 +95,7 @@ class _clonable_verb(_verb_with_params):
     def __call__(self, *args):
         return type(self)(*(self._get_clone_args() + list(args)))
 
-_work_stitch_adverbs_allowed = [ 'knit_or_purl', 'through_back_of_loop', 'from_cable_needle', 'color' ]
+_work_stitch_adverbs_allowed = [ 'knit_or_purl', 'from_cable_needle', 'color' ]
 
 class _work_one_stitch(_repeating_verb, _clonable_verb):
     _adverbs_allowed = _work_stitch_adverbs_allowed
@@ -166,7 +165,7 @@ class into_same_stitch(_base_verb):
         return result
 
 class _work_into_same_stitch(_base_verb):
-    _adverbs_allowed = [ 'knit_or_purl', 'through_back_of_loop', 'color' ]
+    _adverbs_allowed = [ 'knit_or_purl', 'color' ]
 
     def __init__(self, verb):
         self._validate_verb(verb)
@@ -179,8 +178,8 @@ class _work_into_same_stitch(_base_verb):
     def _do(self, ndl):
         return ndl.work_into_current_node(**self._adverb_dict)
 
-knit_front_and_back = into_same_stitch(knit(1), knit(1, through_back_of_loop))
-purl_front_and_back = into_same_stitch(purl(1), purl(1, through_back_of_loop))
+knit_front_and_back = into_same_stitch(knit(1), knit(1))
+purl_front_and_back = into_same_stitch(purl(1), purl(1))
 
 class if_right_side(_base_verb):
     ## REVIEW INTERFACE

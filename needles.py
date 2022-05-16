@@ -108,7 +108,7 @@ class __base(object):
             for cs in self.cable_stitches:
                 crossover(self.mesh, cs, s, self.cable_side * self.orientation, self._yarn_thickness()*2)
 
-    def create_node(self, pull, push, knit_or_purl=0, through_back_of_loop=False, from_cable_needle=False, color=None, node_class=None):
+    def create_node(self, pull, push, knit_or_purl=0, from_cable_needle=False, color=None, node_class=None):
         inbound = []
         newpos = None
 
@@ -146,7 +146,7 @@ class __base(object):
 
         return [new_node]
 
-    def work_into_current_node(self, knit_or_purl=0, through_back_of_loop=False, color=None):
+    def work_into_current_node(self, knit_or_purl=0, color=None):
         if self._current_node is None:
             raise ValueError
         self._push_stitch(v_edge(self.mesh, self._current_node, self._row_height(), color or self.color, self._yarn_thickness()))
