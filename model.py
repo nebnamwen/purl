@@ -85,7 +85,7 @@ class node(meshobject):
         tension_actual = sum([ norm(e.after.pos - e.before.pos) * e.thick_mult for e in tension_edges ])
         tension_ratio = tension_actual / tension_length
         # print(tension_ratio)
-        tension_ratio = exp(0.5*sin(atan(log(tension_ratio))))
+        tension_ratio = exp(0.5*sin(atan(log(tension_ratio + 0.01))))
 
         for e in tension_edges:
             delta = e.after.pos - e.before.pos

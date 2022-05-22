@@ -223,3 +223,48 @@ def honeycomb(m,n):
 
     needle.mesh.relax(100)
     display(needle.mesh).run()
+
+def scroll(m,n):
+    needle = needles.flat()
+
+    key = {
+        ".": if_right_side(knit, purl),
+        "/": if_right_side(k2tog, p2tog),
+        "\\": if_right_side(ssk, ssp),
+        "o": yarnover
+        }
+
+    border = chart(key, ".") ** 18
+
+    scroll_pattern = chart(
+        key,
+        r"""
+. . . . . . . . o \
+. . . . . . . o . \
+. . . . . . o . . \
+. . . . . o . . . \
+. . . . o . . . . \
+. . . o . . . . . \
+. . o . . . . . . \
+. o . . . . . . . \
+o . . . . . . . . \
+/ o . . . . . . . .
+/ . o . . . . . . .
+/ . . o . . . . . .
+/ . . . o . . . . .
+/ . . . . o . . . .
+/ . . . . . o . . .
+/ . . . . . . o . .
+/ . . . . . . . o .
+/ . . . . . . . . o
+"""
+        )
+
+    pattern = (border + scroll_pattern * m + border) ** n
+
+    needle.cast_on(10 * m + 2)
+    needle.do(pattern)
+    needle.bind_off_row()
+
+    needle.mesh.relax(10)
+    display(needle.mesh).run()

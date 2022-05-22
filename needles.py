@@ -114,10 +114,19 @@ class __base(object):
 
         if isinstance(pull, ndarray):
             newpos = pull
-        elif isinstance(pull, int):
-            if pull > 0:
-                inbound = [self._pop_stitch(from_cable_needle) for i in range(pull)]
+        elif isinstance(pull, int) or isinstance(pull, tuple):
+            if isinstance(pull, int):
+                pull = (pull,)
+
+            for grp in pull:
+                inbound.extend(reversed([self._pop_stitch(from_cable_needle) for i in range(grp)]))
+
+            if knit_or_purl < 0:
+                inbound.reverse()
+
+            if inbound:
                 newpos = self._displace(sum([s.before.pos for s in inbound]) / len(inbound))
+
             else:
                 if self.loose_edge:
                     newpos = self.loose_edge.before.pos
