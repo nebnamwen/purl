@@ -6,16 +6,25 @@ from vectors import zero
 
 class mesh(object):
     def __init__(self):
-        self.clear()
-
-    def clear(self):
         self.objects = []
+        self.current_node_id = 0
+        self.node_index = {}
 
     def add(self, obj):
         self.objects.append(obj)
 
+        if isinstance(obj, node):
+            self.node_index[obj.id] = obj
+
     def remove(self, obj):
         self.objects.remove(obj)
+
+        if isinstance(obj, node):
+            del self.node_index[obj.id]
+
+    def next_node_id(self):
+        self.current_node_id += 1
+        return self.current_node_id
 
     def relax(self, N=1):
         self.cook_vectors(True)
@@ -24,6 +33,7 @@ class mesh(object):
             forces = []
 
             for obj in self.objects:
+                obj.push_history_frame()
                 forces.extend(obj.get_forces())
 
             for f in forces:
@@ -61,9 +71,16 @@ class meshobject(object):
     def cook_vectors(self, topo=False):
         pass
 
+    def push_history_frame(self):
+        pass
+
 class node(meshobject):
     def __init__(self, msh, pos, rs_norm, ks_norm, before, below):
+        self.id = msh.next_node_id()
         meshobject.__init__(self, msh)
+
+        self.history = []
+
         self.pos = pos
         self.rs_norm = rs_norm
         self.ks_norm = ks_norm
@@ -193,6 +210,9 @@ class node(meshobject):
         self._h_arrow = self.__h_arrow()
         self._v_arrow = self.__v_arrow()
 
+    def push_history_frame(self):
+        self.history.append(_history_frame(self.pos))
+
     def __h_arrow(self):
         bef = self._before.before.pos if self._before else self.pos
         aft = self._after.after.pos if self._after else self.pos
@@ -294,6 +314,11 @@ class yarnover_node(node):
         segments.append(draw_segment(points, e.color, e.thickness))
 
         return segments
+
+class _history_frame:
+    def __init__(self, pos):
+        self.pos = pos
+        self.forces = []
 
 class edge(meshobject):
     thick_mult = 0
@@ -414,6 +439,7 @@ class force(object):
 
     def apply(self):
         self.node.pos = self.node.pos + self.delta
+        self.node.history[-1].forces.append(self)
 
     @classmethod
     def dot(cls, e, arrow, offset, strength):
