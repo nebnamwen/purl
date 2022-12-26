@@ -106,7 +106,7 @@ class node(meshobject):
 
         for e in tension_edges:
             delta = e.after.pos - e.before.pos
-            forces.extend(force.dot(e, delta, norm(delta) / tension_ratio, 0.25))
+            forces.extend(force.dot(f"n_tension node {self.id}", e, delta, norm(delta) / tension_ratio, 0.25))
 
         return forces
 
@@ -116,9 +116,9 @@ class node(meshobject):
         if norm(self._h_arrow) > 0:
             # correct horizontal shear of vertical edges
             for e in self._down:
-                forces.extend(force.dot(e, self._h_arrow, 0, 0.1/len(self._down)))
+                forces.extend(force.dot(f"h_shear node {self.id}", e, self._h_arrow, 0, 0.1/len(self._down)))
             for e in self._up:
-                forces.extend(force.dot(e, self._h_arrow, 0, 0.1/len(self._up)))
+                forces.extend(force.dot(f"h_shear node {self.id}", e, self._h_arrow, 0, 0.1/len(self._up)))
 
         return forces
 
@@ -129,9 +129,9 @@ class node(meshobject):
             # correct foldover of horizontal edges
             if self._before and self._after:
                 if self._h_arrow.dot(self.pos - self._before.before.pos) < 0:
-                    forces.extend(force.dot(self._before, self._h_arrow, 0, 0.1))
+                    forces.extend(force.dot(f"h_fold node {self.id}", self._before, self._h_arrow, 0, 0.1))
                 if self._h_arrow.dot(self._after.after.pos - self.pos) < 0:
-                    forces.extend(force.dot(self._after, self._h_arrow, 0, 0.1))
+                    forces.extend(force.dot(f"h_fold node {self.id}", self._after, self._h_arrow, 0, 0.1))
 
         return forces
 
@@ -141,9 +141,9 @@ class node(meshobject):
         if norm(self._v_arrow) > 0:
             # correct vertical shear of horizontal edges
             if self._before:
-                forces.extend(force.dot(self._before, self._v_arrow, 0, 0.1))
+                forces.extend(force.dot(f"v_shear node {self.id}", self._before, self._v_arrow, 0, 0.1))
             if self._after:
-                forces.extend(force.dot(self._after, self._v_arrow, 0, 0.1))
+                forces.extend(force.dot(f"v_shear node {self.id}", self._after, self._v_arrow, 0, 0.1))
 
         return forces
 
@@ -156,12 +156,12 @@ class node(meshobject):
         # align all edges with the plane of the node, with an offset for knit/purl curl moment
         if self._up and self._down:
             for e in self._up:
-                forces.extend(force.dot(e, normal, nsign*e.thickness, 0.1))
+                forces.extend(force.dot(f"n_flatten node {self.id}", e, normal, nsign*e.thickness, 0.1))
             for e in self._down:
-                forces.extend(force.dot(e, normal, -nsign*e.thickness, 0.1))
+                forces.extend(force.dot(f"n_flatten node {self.id}", e, normal, -nsign*e.thickness, 0.1))
         if self._before and self._after:
-            forces.extend(force.dot(self._before, normal, nsign*self._before.thickness, 0.1))
-            forces.extend(force.dot(self._after, normal, -nsign*self._after.thickness, 0.1))
+            forces.extend(force.dot(f"n_flatten node {self.id}", self._before, normal, nsign*self._before.thickness, 0.1))
+            forces.extend(force.dot(f"n_flatten node {self.id}", self._after, normal, -nsign*self._after.thickness, 0.1))
 
         return forces
 
@@ -338,7 +338,7 @@ class edge(meshobject):
         self.mesh.remove(self)
 
     def get_forces(self):
-        return force.dot(self, self.after.pos - self.before.pos, self.length, 0.1)
+        return force.dot(f"e_tension", self, self.after.pos - self.before.pos, self.length, 0.1)
 
     def draw_half_segments(self, n):
         return []
@@ -366,6 +366,8 @@ class v_edge(edge):
                 return [
                     draw_segment([(5*p1 + 3*p2)/8, (3*p1 + 5*p2)/8, p2, p3, (5*p3 + 3*p4)/8, (3*p3 + 5*p4)/8], self.color, self.thickness)
                     ]
+        else:
+            return []
 
 class h_edge(edge):
     thick_mult = 1
@@ -379,6 +381,8 @@ class h_edge(edge):
             p1 = bef if n is self.before else aft
             p2 = (bef + aft) / 2
             return [ draw_segment([p1, p1, p2], self.color, self.thickness) ]
+        else:
+            return []
 
 class draw_segment(object):
     def __init__(self, points, color, thickness):
@@ -416,10 +420,11 @@ class crossover(meshobject):
 
             if over_dot - under_dot < self.thickness:
                 delta = self.thickness + under_dot - over_dot
+                desc = f"crossover ({self.over.before.id},{self.over.after.id}) / ({self.under.before.id},{self.under.after.id})"
                 for n in over_nodes:
-                    forces.append(force(n, delta * normal * 0.1))
+                    forces.append(force(desc, n, delta * normal * 0.1))
                 for n in under_nodes:
-                    forces.append(force(n, -delta * normal * 0.1))
+                    forces.append(force(desc, n, -delta * normal * 0.1))
 
         return forces
 
@@ -433,20 +438,23 @@ class block_force(meshobject):
         return [ force(n, self.f(n)) for n in self.nodes ]
 
 class force(object):
-    def __init__(self, N, D):
+    def __init__(self, desc, N, D):
+        self.description = desc
         self.node = N
         self.delta = D
 
     def apply(self):
         self.node.pos = self.node.pos + self.delta
-        self.node.history[-1].forces.append(self)
+        if self.node.history:
+            self.node.history[-1].forces.append(self)
 
     @classmethod
-    def dot(cls, e, arrow, offset, strength):
+    def dot(cls, desc, e, arrow, offset, strength):
         n = norm(arrow)
         if n > 0:
+            desc = f"{desc} edge({e.before.id},{e.after.id})"
             arrow = arrow / n
             delta = arrow * (arrow.dot(e.after.pos - e.before.pos) - offset) * strength
-            return [ cls(e.before, delta), cls(e.after, -delta) ]
+            return [ cls(desc, e.before, delta), cls(desc, e.after, -delta) ]
         else:
             return []
