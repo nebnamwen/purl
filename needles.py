@@ -92,7 +92,7 @@ class __base(object):
                         target = working[i+j].pos + j*self._stitch_width()*arrow
                         delta = arrow * arrow.dot(target - working[i].pos)
                         delta *= 0.5
-                        forces.append(force(working[i], delta))
+                        forces.append(force(None, working[i], delta))
             for f in forces: f.apply()
 
     def _pop_stitch(self, from_cable=False):
@@ -149,7 +149,7 @@ class __base(object):
 
         self._current_node = new_node
 
-        if isinstance(pull, int) and push > 0:
+        if isinstance(pull, tuple) and push > 0:
             self._to_be_relaxed += 1
             self._relax()
 
